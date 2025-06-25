@@ -42,6 +42,14 @@ export default class CanvasManager {
     this.context.closePath()
   }
 
+  public drawRectangle(coordX: number, coordY: number, width: number, height: number, fillStyle?: string): void {
+    this.context.fillStyle = fillStyle || 'white'
+    this.context.beginPath()
+    this.context.rect(coordX, coordY, width, height)
+    this.context.fill()
+    this.context.closePath()
+  }
+
   // Getters and setters
   public getCanvas(): HTMLCanvasElement {
     return this.canvas
