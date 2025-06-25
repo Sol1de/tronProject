@@ -66,10 +66,8 @@ export default class CanvasManager {
 
   public initGrid(deadZoneWidth: number, deadZoneHeight: number, gridSizeWidth: number, gridSizeHeight: number): void {
     const gridPoints: Array<{x: number, y: number}> = []
-    console.log(gridSizeWidth, gridSizeHeight)
-    gridSizeWidth = this.verifyWidth(gridSizeWidth)
-    gridSizeHeight = this.verifyHeight(gridSizeHeight)
-    console.log(gridSizeWidth, gridSizeHeight)
+    console.log(this.getSizeMultiples(this.width))
+    console.log(this.getSizeMultiples(this.height))
     
     for (let i = 0; i < this.width + gridSizeWidth; i += gridSizeWidth) {
       for (let j = 0; j < this.height + gridSizeHeight; j += gridSizeHeight) {
@@ -95,68 +93,20 @@ export default class CanvasManager {
     }
   }
 
-  private verifyWidth(requestedWidth: number): number {
-    if (requestedWidth <= 0 || requestedWidth >= this.width) {
-      return this.width/2
-    }
-    
-    let bestWidth = this.width
-    let minDiff = Math.abs(this.width - requestedWidth)
-    const sqrt = Math.sqrt(this.width)
-    
+  public getSizeMultiples(canvasSize: number): number[] {
+    const multiples: number[] = []
+    const sqrt = Math.sqrt(canvasSize)
+     
     for (let i = 1; i <= sqrt; i++) {
-      if (this.width % i === 0) {
-        const size1 = this.width / i
-        const diff1 = Math.abs(size1 - requestedWidth)
-        if (diff1 < minDiff) {
-          minDiff = diff1
-          bestWidth = size1
-        }
-        
+      if (canvasSize % i === 0) {
+        multiples.push(canvasSize / i)
         if (i !== sqrt) {
-          const size2 = i
-          const diff2 = Math.abs(size2 - requestedWidth)
-          if (diff2 < minDiff) {
-            minDiff = diff2
-            bestWidth = size2
-          }
+          multiples.push(i)
         }
       }
     }
-    
-    return bestWidth
-  }
-
-  private verifyHeight(requestedHeight: number): number {
-    if (requestedHeight <= 0 || requestedHeight >= this.height) {
-      return this.height/2
-    }
-    
-    let bestHeight = this.height
-    let minDiff = Math.abs(this.height - requestedHeight)
-    const sqrt = Math.sqrt(this.height)
-    
-    for (let i = 1; i <= sqrt; i++) {
-      if (this.height % i === 0) {
-        const size1 = this.height / i
-        const diff1 = Math.abs(size1 - requestedHeight)
-        if (diff1 < minDiff) {
-          minDiff = diff1
-          bestHeight = size1
-        }
-        
-        if (i !== sqrt) {
-          const size2 = i
-          const diff2 = Math.abs(size2 - requestedHeight)
-          if (diff2 < minDiff) {
-            minDiff = diff2
-            bestHeight = size2
-          }
-        }
-      }
-    }
-    
-    return bestHeight
+     
+    return multiples.sort((a, b) => a - b).slice(1, -1)
   }
 
   // Getters and setters
