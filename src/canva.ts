@@ -98,7 +98,7 @@ export default class CanvasManager {
     this.context.restore()
   }
 
-  public initGrid(deadZoneWidth: number, deadZoneHeight: number, gridSizeWidth: number, gridSizeHeight: number): Array<{x: number, y: number}> {
+  public initGrid(gridSizeWidth: number, gridSizeHeight: number, deadZoneWidth?: number, deadZoneHeight?: number): {gridSizeWidth: number, gridSizeHeight: number, gridPoints: Array<{x: number, y: number}>} {
     const gridPoints: Array<{x: number, y: number}> = []
     gridSizeWidth = this.verifyGridSize(gridSizeWidth, 'width')
     gridSizeHeight = this.verifyGridSize(gridSizeHeight, 'height')
@@ -108,8 +108,8 @@ export default class CanvasManager {
         gridPoints.push({ x: i, y: j })
       }
     }
-    
-    return gridPoints
+
+    return {gridSizeWidth, gridSizeHeight, gridPoints}
   }
 
   public drawGrid(gridPoints: Array<{x: number, y: number}>, gridSizeWidth: number, gridSizeHeight: number): void {

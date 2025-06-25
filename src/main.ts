@@ -7,5 +7,5 @@ document.querySelector<HTMLDivElement>('#app')!.innerHTML = /*html*/`
   </div>
 `
 const canvas = CanvasManager.initCanvas()
-const gridPoints = canvas.initGrid(100, 100, 100, 100)
-canvas.drawGrid(gridPoints, 100, 100)
+const {gridSizeWidth, gridSizeHeight, gridPoints} = canvas.initGrid(100, 100)
+canvas.drawGrid(gridPoints, gridSizeWidth, gridSizeHeight)
