@@ -64,6 +64,33 @@ export default class CanvasManager {
     this.context.restore()
   }
 
+  public initGrid(deadZoneWidth: number, deadZoneHeight: number, gridSizeWidth: number, gridSizeHeight: number): void {
+    const gridPoints: Array<{x: number, y: number}> = []
+    
+    for (let i = 0; i < this.width + gridSizeWidth; i += gridSizeWidth) {
+      for (let j = 0; j < this.height + gridSizeHeight; j += gridSizeHeight) {
+        gridPoints.push({ x: i, y: j })
+      }
+    }
+    
+    // Draw points at grid intersections
+    gridPoints.forEach(point => {
+      this.drawCircle(point.x, point.y, 3, 'yellow')
+    })
+    
+    // Draw horizontal lines
+    for (let row = 0; row <= this.height / gridSizeHeight; row++) {
+      const y = row * gridSizeHeight
+      this.drawLine(0, y, this.width, y, 'white', 1)
+    }
+    
+    // Draw vertical lines
+    for (let col = 0; col <= this.width / gridSizeWidth; col++) {
+      const x = col * gridSizeWidth
+      this.drawLine(x, 0, x, this.height, 'white', 1)
+    }
+  }
+
   // Getters and setters
   public getCanvas(): HTMLCanvasElement {
     return this.canvas
