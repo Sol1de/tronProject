@@ -7,4 +7,5 @@ document.querySelector<HTMLDivElement>('#app')!.innerHTML = /*html*/`
   </div>
 `
 const canvas = CanvasManager.initCanvas()
-canvas.drawLine(0, 0, 300, 300, 'green', 1)
+canvas.drawLine(canvas.getWidth()/2, canvas.getHeight()/2, 600, 600, 'green', 1)
+canvas.drawCircle(canvas.getWidth()/2, canvas.getHeight()/2, 10, 'red')

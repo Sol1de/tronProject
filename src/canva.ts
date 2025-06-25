@@ -34,6 +34,14 @@ export default class CanvasManager {
     this.context.closePath()
   }
 
+  public drawCircle(coordX: number, coordY: number, radius: number, fillStyle?: string): void {
+    this.context.fillStyle = fillStyle || 'white'
+    this.context.beginPath()
+    this.context.arc(coordX, coordY, radius, 0, 2 * Math.PI)
+    this.context.fill()
+    this.context.closePath()
+  }
+
   // Getters and setters
   public getCanvas(): HTMLCanvasElement {
     return this.canvas
