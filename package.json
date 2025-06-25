@@ -14,6 +14,7 @@
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.1.10",
+    "destyle.css": "^4.0.1",
     "tailwindcss": "^4.1.10"
   }
 }
