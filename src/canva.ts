@@ -12,6 +12,40 @@ export default class CanvasManager {
     this.height = height
   }
 
+  private getSizeMultiples(canvasSize: number): number[] {
+    const multiples: number[] = []
+    const sqrt = Math.sqrt(canvasSize)
+     
+    for (let i = 1; i <= sqrt; i++) {
+      if (canvasSize % i === 0) {
+        multiples.push(canvasSize / i)
+        if (i !== sqrt) {
+          multiples.push(i)
+        }
+      }
+    }
+     
+    return multiples.sort((a, b) => a - b).slice(1, -1)
+  }
+
+  private verifyGridSize(gridSize: number, dimension: 'width' | 'height'): number {
+    const canvasSize = dimension === 'width' ? this.width : this.height
+    const multiples = this.getSizeMultiples(canvasSize)
+    let closest = multiples[0]
+    
+    if (multiples.includes(gridSize) || multiples.length === 0) {
+      return gridSize
+    }
+    
+    for (const multiple of multiples) {
+      if (Math.abs(multiple - gridSize) < Math.abs(closest - gridSize)) {
+        closest = multiple
+      }
+    }
+    
+    return closest
+  }
+
   public static initCanvas(): CanvasManager {
     const canvas = document.getElementById("canvas") as HTMLCanvasElement
     const context = canvas.getContext('2d')
@@ -93,40 +127,6 @@ export default class CanvasManager {
       const x = col * gridSizeWidth
       this.drawLine(x, 0, x, this.height, 'white', 1)
     }
-  }
-
-  public getSizeMultiples(canvasSize: number): number[] {
-    const multiples: number[] = []
-    const sqrt = Math.sqrt(canvasSize)
-     
-    for (let i = 1; i <= sqrt; i++) {
-      if (canvasSize % i === 0) {
-        multiples.push(canvasSize / i)
-        if (i !== sqrt) {
-          multiples.push(i)
-        }
-      }
-    }
-     
-    return multiples.sort((a, b) => a - b).slice(1, -1)
-  }
-
-  public verifyGridSize(gridSize: number, dimension: 'width' | 'height'): number {
-    const canvasSize = dimension === 'width' ? this.width : this.height
-    const multiples = this.getSizeMultiples(canvasSize)
-    let closest = multiples[0]
-    
-    if (multiples.includes(gridSize) || multiples.length === 0) {
-      return gridSize
-    }
-    
-    for (const multiple of multiples) {
-      if (Math.abs(multiple - gridSize) < Math.abs(closest - gridSize)) {
-        closest = multiple
-      }
-    }
-    
-    return closest
   }
 
   // Getters and setters
