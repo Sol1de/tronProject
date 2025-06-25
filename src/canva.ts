@@ -66,8 +66,10 @@ export default class CanvasManager {
 
   public initGrid(deadZoneWidth: number, deadZoneHeight: number, gridSizeWidth: number, gridSizeHeight: number): void {
     const gridPoints: Array<{x: number, y: number}> = []
+    gridSizeWidth = this.verifyGridSize(gridSizeWidth, 'width')
+    gridSizeHeight = this.verifyGridSize(gridSizeHeight, 'height')
     console.log(this.getSizeMultiples(this.width))
-    console.log(this.getSizeMultiples(this.height))
+    console.log(gridSizeWidth, gridSizeHeight)
     
     for (let i = 0; i < this.width + gridSizeWidth; i += gridSizeWidth) {
       for (let j = 0; j < this.height + gridSizeHeight; j += gridSizeHeight) {
@@ -107,6 +109,24 @@ export default class CanvasManager {
     }
      
     return multiples.sort((a, b) => a - b).slice(1, -1)
+  }
+
+  public verifyGridSize(gridSize: number, dimension: 'width' | 'height'): number {
+    const canvasSize = dimension === 'width' ? this.width : this.height
+    const multiples = this.getSizeMultiples(canvasSize)
+    let closest = multiples[0]
+    
+    if (multiples.includes(gridSize) || multiples.length === 0) {
+      return gridSize
+    }
+    
+    for (const multiple of multiples) {
+      if (Math.abs(multiple - gridSize) < Math.abs(closest - gridSize)) {
+        closest = multiple
+      }
+    }
+    
+    return closest
   }
 
   // Getters and setters
