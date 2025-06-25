@@ -50,6 +50,20 @@ export default class CanvasManager {
     this.context.closePath()
   }
 
+  public drawTriangle(coordX: number, coordY: number, width: number, height: number, rotation: number, fillStyle?: string): void {
+    this.context.save()
+    this.context.fillStyle = fillStyle || 'white'
+    this.context.translate(coordX + width/2, coordY + height/2)
+    this.context.rotate(rotation * Math.PI / 180)
+    this.context.beginPath()
+    this.context.moveTo(-width/2, -height/2)
+    this.context.lineTo(width/2, -height/2)
+    this.context.lineTo(0, height/2)
+    this.context.closePath()
+    this.context.fill()
+    this.context.restore()
+  }
+
   // Getters and setters
   public getCanvas(): HTMLCanvasElement {
     return this.canvas
