@@ -98,33 +98,141 @@ export default class CanvasManager {
     this.context.restore()
   }
 
-  public initGrid(gridSizeWidth: number, gridSizeHeight: number, deadZoneWidth?: number, deadZoneHeight?: number): {gridSizeWidth: number, gridSizeHeight: number, gridPoints: Array<{x: number, y: number}>} {
+  public initGrid(gridSizeWidth: number, gridSizeHeight: number, deadZoneWidth?: number, deadZoneHeight?: number, basePoint?: {x: number, y: number}): {gridSizeWidth: number, gridSizeHeight: number, gridPoints: Array<{x: number, y: number}>, deadZone?: {basePoint: {x: number, y: number}, deadZoneWidth: number, deadZoneHeight: number}} {
     const gridPoints: Array<{x: number, y: number}> = []
+    let deadZone: {
+      basePoint: {x: number, y: number}, 
+      deadZoneWidth: number, 
+      deadZoneHeight: number
+    } | undefined
+
     gridSizeWidth = this.verifyGridSize(gridSizeWidth, 'width')
     gridSizeHeight = this.verifyGridSize(gridSizeHeight, 'height')
     
+    if (deadZoneWidth && deadZoneHeight && basePoint) {
+      deadZone = this.initDeadZone(basePoint, deadZoneWidth, deadZoneHeight)
+    }
+    
     for (let i = 0; i < this.width + gridSizeWidth; i += gridSizeWidth) {
       for (let j = 0; j < this.height + gridSizeHeight; j += gridSizeHeight) {
+        if (deadZone && this.isPointInDeadZone(i, j, deadZone)) {
+          continue
+        }
         gridPoints.push({ x: i, y: j })
       }
     }
 
-    return {gridSizeWidth, gridSizeHeight, gridPoints}
+    return {gridSizeWidth, gridSizeHeight, gridPoints, deadZone}
   }
 
-  public drawGrid(gridPoints: Array<{x: number, y: number}>, gridSizeWidth: number, gridSizeHeight: number): void {
-     gridPoints.forEach(point => {
+  private initDeadZone(basePoint: {x: number, y: number}, deadZoneWidth: number, deadZoneHeight: number): {basePoint: {x: number, y: number}, deadZoneWidth: number, deadZoneHeight: number} {
+    return {
+      basePoint: {
+        x: basePoint.x,
+        y: basePoint.y
+      },
+      deadZoneWidth,
+      deadZoneHeight
+    }
+  }
+
+  private isPointInDeadZone(x: number, y: number, deadZone: {basePoint: {x: number, y: number}, deadZoneWidth: number, deadZoneHeight: number}): boolean {
+    const halfWidth = deadZone.deadZoneWidth / 2
+    const halfHeight = deadZone.deadZoneHeight / 2
+    
+    return x > deadZone.basePoint.x - halfWidth && 
+           x < deadZone.basePoint.x + halfWidth &&
+           y > deadZone.basePoint.y - halfHeight && 
+           y < deadZone.basePoint.y + halfHeight
+  }
+
+  public drawGrid(gridPoints: Array<{x: number, y: number}>, gridSizeWidth: number, gridSizeHeight: number, deadZone?: {basePoint: {x: number, y: number}, deadZoneWidth: number, deadZoneHeight: number}): void {
+    gridPoints.forEach(point => {
       this.drawCircle(point.x, point.y, 3, 'yellow')
     })
     
     for (let row = 0; row <= this.height / gridSizeHeight; row++) {
       const y = row * gridSizeHeight
-      this.drawLine(0, y, this.width, y, 'white', 1)
+
+      if (deadZone) {
+        this.drawGridLineWithDeadZone(0, y, this.width, y, deadZone, 'horizontal')
+      } else {
+        this.drawLine(0, y, this.width, y, 'white', 1)
+      }
     }
     
     for (let col = 0; col <= this.width / gridSizeWidth; col++) {
       const x = col * gridSizeWidth
-      this.drawLine(x, 0, x, this.height, 'white', 1)
+      if (deadZone) {
+        this.drawGridLineWithDeadZone(x, 0, x, this.height, deadZone, 'vertical')
+      } else {
+        this.drawLine(x, 0, x, this.height, 'white', 1)
+      }
+    }
+    
+    if (deadZone) {
+      this.drawDeadZoneBoundary(deadZone, gridSizeWidth, gridSizeHeight)
+    }
+  }
+
+  private drawGridLineWithDeadZone(startX: number, startY: number, endX: number, endY: number, deadZone: {basePoint: {x: number, y: number}, deadZoneWidth: number, deadZoneHeight: number}, direction: 'horizontal' | 'vertical'): void {
+    const halfWidth = deadZone.deadZoneWidth / 2
+    const halfHeight = deadZone.deadZoneHeight / 2
+    const dzLeft = deadZone.basePoint.x - halfWidth
+    const dzRight = deadZone.basePoint.x + halfWidth
+    const dzTop = deadZone.basePoint.y - halfHeight
+    const dzBottom = deadZone.basePoint.y + halfHeight
+    
+    if (direction === 'horizontal') {
+      if (startY >= dzTop && startY <= dzBottom) {
+        if (startX < dzLeft) {
+          this.drawLine(startX, startY, dzLeft, startY, 'white', 1)
+        }
+        if (endX > dzRight) {
+          this.drawLine(dzRight, startY, endX, startY, 'white', 1)
+        }
+      } else {
+        this.drawLine(startX, startY, endX, startY, 'white', 1)
+      }
+    } else {
+      if (startX >= dzLeft && startX <= dzRight) {
+        if (startY < dzTop) {
+          this.drawLine(startX, startY, startX, dzTop, 'white', 1)
+        }
+        if (endY > dzBottom) {
+          this.drawLine(startX, dzBottom, startX, endY, 'white', 1)
+        }
+      } else {
+        this.drawLine(startX, startY, startX, endY, 'white', 1)
+      }
+    }
+  }
+
+  private drawDeadZoneBoundary(deadZone: {basePoint: {x: number, y: number}, deadZoneWidth: number, deadZoneHeight: number}, gridSizeWidth: number, gridSizeHeight: number): void {
+    const halfWidth = deadZone.deadZoneWidth / 2
+    const halfHeight = deadZone.deadZoneHeight / 2
+    const left = deadZone.basePoint.x - halfWidth
+    const right = deadZone.basePoint.x + halfWidth
+    const top = deadZone.basePoint.y - halfHeight
+    const bottom = deadZone.basePoint.y + halfHeight
+    
+    this.drawLine(left, top, right, top, 'red', 2)
+    this.drawLine(right, top, right, bottom, 'red', 2)
+    this.drawLine(right, bottom, left, bottom, 'red', 2)
+    this.drawLine(left, bottom, left, top, 'red', 2)
+    
+    for (let x = Math.ceil(left / gridSizeWidth) * gridSizeWidth; x <= right; x += gridSizeWidth) {
+      if (x >= left && x <= right) {
+        this.drawCircle(x, top, 4, 'red')
+        this.drawCircle(x, bottom, 4, 'red')
+      }
+    }
+    
+    for (let y = Math.ceil(top / gridSizeHeight) * gridSizeHeight; y <= bottom; y += gridSizeHeight) {
+      if (y >= top && y <= bottom) {
+        this.drawCircle(left, y, 4, 'red')
+        this.drawCircle(right, y, 4, 'red')
+      }
     }
   }
 

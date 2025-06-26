@@ -6,6 +6,9 @@ document.querySelector<HTMLDivElement>('#app')!.innerHTML = /*html*/`
     <canvas id="canvas" width="600" height="600" class="bg-black"></canvas>
   </div>
 `
+
 const canvas = CanvasManager.initCanvas()
-const {gridSizeWidth, gridSizeHeight, gridPoints} = canvas.initGrid(100, 100)
-canvas.drawGrid(gridPoints, gridSizeWidth, gridSizeHeight)
+
+const {gridSizeWidth, gridSizeHeight, gridPoints, deadZone} = canvas.initGrid(50, 50, 200, 150, {x: 300, y: 300})
+
+canvas.drawGrid(gridPoints, gridSizeWidth, gridSizeHeight, deadZone)
