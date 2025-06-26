@@ -111,17 +111,72 @@ export default class CanvasManager {
     
     if (deadZoneWidth && deadZoneHeight && basePoint) {
       deadZone = this.initDeadZone(basePoint, deadZoneWidth, deadZoneHeight)
+      console.log(`DeadZone initialisée: centre(${basePoint.x}, ${basePoint.y}), taille: ${deadZoneWidth}x${deadZoneHeight}`)
+      console.log(`Limites deadZone: left=${basePoint.x - deadZoneWidth/2}, right=${basePoint.x + deadZoneWidth/2}, top=${basePoint.y - deadZoneHeight/2}, bottom=${basePoint.y + deadZoneHeight/2}`)
     }
     
-    for (let i = 0; i < this.width + gridSizeWidth; i += gridSizeWidth) {
-      for (let j = 0; j < this.height + gridSizeHeight; j += gridSizeHeight) {
-        if (deadZone && this.isPointInDeadZone(i, j, deadZone)) {
-          continue
+    // Calculer le nombre de lignes et colonnes
+    const cols = Math.floor(this.width / gridSizeWidth) + 1
+    const rows = Math.floor(this.height / gridSizeHeight) + 1
+    
+    console.log(`Canvas: ${this.width}x${this.height}, GridSize: ${gridSizeWidth}x${gridSizeHeight}`)
+    console.log(`Colonnes: ${cols}, Lignes: ${rows}, Total théorique: ${cols * rows}`)
+    
+    // Générer tous les points de grille possibles
+    let totalGenerated = 0
+    let excludedByDeadZone = 0
+    let excludedByBounds = 0
+    let addedBorderPoints = 0
+    
+    for (let col = 0; col < cols; col++) {
+      for (let row = 0; row < rows; row++) {
+        const x = col * gridSizeWidth
+        const y = row * gridSizeHeight
+        totalGenerated++
+        
+        // Vérifier si le point est dans les limites du canvas
+        if (x <= this.width && y <= this.height) {
+          // Vérifier si le point est dans la deadzone
+          if (deadZone && this.isPointInDeadZone(x, y, deadZone)) {
+            excludedByDeadZone++
+            console.log(`Point (${x}, ${y}) exclu par deadzone`)
+          } else {
+            gridPoints.push({ x, y })
+          }
+        } else {
+          excludedByBounds++
         }
-        gridPoints.push({ x: i, y: j })
       }
     }
+    
+    // Ajouter les points de bordure de la deadzone si elle existe
+    if (deadZone) {
+      const borderPoints = this.generateDeadZoneBorderPoints(deadZone, gridSizeWidth, gridSizeHeight)
+      borderPoints.forEach(point => {
+        // Vérifier que le point n'existe pas déjà
+        const exists = gridPoints.some(existing => existing.x === point.x && existing.y === point.y)
+        if (!exists && point.x <= this.width && point.y <= this.height) {
+          gridPoints.push(point)
+          addedBorderPoints++
+          console.log(`Point de bordure ajouté: (${point.x}, ${point.y})`)
+        }
+      })
+    }
+    
+    console.log(`Debug: cols=${cols}, rows=${rows}, totalGenerated=${totalGenerated}`)
+    console.log(`Exclus par limites: ${excludedByBounds}, Exclus par deadzone: ${excludedByDeadZone}`)
+    console.log(`Points de bordure ajoutés: ${addedBorderPoints}`)
+    console.log(`Points ajoutés: ${gridPoints.length}`)
 
+    if (deadZone) {
+      const totalPossiblePoints = cols * rows
+      const pointsInDeadZone = totalPossiblePoints - gridPoints.length
+      console.log(`DeadZone: centre(${deadZone.basePoint.x}, ${deadZone.basePoint.y}), taille: ${deadZone.deadZoneWidth}x${deadZone.deadZoneHeight}`)
+      console.log(`Points totaux possibles: ${totalPossiblePoints}, Points exclus par deadZone: ${pointsInDeadZone}, Points finaux: ${gridPoints.length}`)
+    } else {
+      console.log(`Points générés: ${gridPoints.length}, Grille: ${cols}x${rows}`)
+    }
+    console.log(gridPoints)
     return {gridSizeWidth, gridSizeHeight, gridPoints, deadZone}
   }
 
@@ -140,10 +195,38 @@ export default class CanvasManager {
     const halfWidth = deadZone.deadZoneWidth / 2
     const halfHeight = deadZone.deadZoneHeight / 2
     
-    return x > deadZone.basePoint.x - halfWidth && 
-           x < deadZone.basePoint.x + halfWidth &&
-           y > deadZone.basePoint.y - halfHeight && 
-           y < deadZone.basePoint.y + halfHeight
+    return x >= deadZone.basePoint.x - halfWidth && 
+           x <= deadZone.basePoint.x + halfWidth &&
+           y >= deadZone.basePoint.y - halfHeight && 
+           y <= deadZone.basePoint.y + halfHeight
+  }
+
+  private generateDeadZoneBorderPoints(deadZone: {basePoint: {x: number, y: number}, deadZoneWidth: number, deadZoneHeight: number}, gridSizeWidth: number, gridSizeHeight: number): Array<{x: number, y: number}> {
+    const borderPoints: Array<{x: number, y: number}> = []
+    const halfWidth = deadZone.deadZoneWidth / 2
+    const halfHeight = deadZone.deadZoneHeight / 2
+    const left = deadZone.basePoint.x - halfWidth
+    const right = deadZone.basePoint.x + halfWidth
+    const top = deadZone.basePoint.y - halfHeight
+    const bottom = deadZone.basePoint.y + halfHeight
+    
+    // Points sur les bordures horizontales (top et bottom)
+    for (let x = Math.ceil(left / gridSizeWidth) * gridSizeWidth; x <= right; x += gridSizeWidth) {
+      if (x >= left && x <= right) {
+        borderPoints.push({ x, y: top })
+        borderPoints.push({ x, y: bottom })
+      }
+    }
+    
+    // Points sur les bordures verticales (left et right)
+    for (let y = Math.ceil(top / gridSizeHeight) * gridSizeHeight; y <= bottom; y += gridSizeHeight) {
+      if (y >= top && y <= bottom) {
+        borderPoints.push({ x: left, y })
+        borderPoints.push({ x: right, y })
+      }
+    }
+    
+    return borderPoints
   }
 
   public drawGrid(gridPoints: Array<{x: number, y: number}>, gridSizeWidth: number, gridSizeHeight: number, deadZone?: {basePoint: {x: number, y: number}, deadZoneWidth: number, deadZoneHeight: number}): void {
