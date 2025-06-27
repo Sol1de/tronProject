@@ -373,13 +373,10 @@ export default class CanvasManager {
     
     // Si la méthode classique trouve des voisins, l'utiliser
     if (classicNeighbors.length > 0) {
-      console.log(`Voisins trouvés (méthode classique) pour (${point.x}, ${point.y}):`, classicNeighbors)
       return classicNeighbors
     }
     
     // Sinon, utiliser la méthode flexible pour les points problématiques
-    console.log(`Méthode classique échouée pour (${point.x}, ${point.y}), utilisation de la méthode flexible`)
-    
     const flexibleNeighbors = allValidPoints.filter(candidate => {
       if (candidate.x === point.x && candidate.y === point.y) return false
       
@@ -398,7 +395,6 @@ export default class CanvasManager {
       return isValid
     })
     
-    console.log(`Voisins trouvés (méthode flexible) pour (${point.x}, ${point.y}):`, flexibleNeighbors)
     return flexibleNeighbors
   }
 
@@ -441,7 +437,6 @@ export default class CanvasManager {
         this.startPoint = nearestPoint
         this.redraw()
         this.drawCircle(this.startPoint.x, this.startPoint.y, 8, 'blue')
-        console.log('Point de départ:', this.startPoint)
       } else if (!this.endPoint) {
         this.endPoint = nearestPoint
         this.redraw()
@@ -450,7 +445,6 @@ export default class CanvasManager {
         
         const path = this.aStar(this.startPoint, this.endPoint)
         if (path) {
-          console.log('Chemin trouvé:', path)
           this.drawPath(path)
         } else {
           console.log('Aucun chemin trouvé!')
@@ -461,7 +455,6 @@ export default class CanvasManager {
         this.endPoint = null
         this.redraw()
         this.drawCircle(this.startPoint.x, this.startPoint.y, 8, 'blue')
-        console.log('Nouveau départ:', this.startPoint)
       }
     }
   }
@@ -473,31 +466,23 @@ export default class CanvasManager {
     // Si une deadZone existe, ajouter les points de bordure qui ne sont pas déjà dans gridPoints
     if (this.deadZone) {
       const deadZoneBorderPoints = this.getDeadZoneBorderPoints(this.deadZone)
-      console.log('Points de bordure deadZone générés:', deadZoneBorderPoints)
       
       for (const borderPoint of deadZoneBorderPoints) {
         const exists = this.gridPoints.some(p => p.x === borderPoint.x && p.y === borderPoint.y)
         if (!exists) {
           availablePoints.push(borderPoint)
-          console.log('Point de bordure ajouté:', borderPoint)
         }
       }
     }
 
     // Chercher le point le plus proche dans la liste combinée
-    const result = availablePoints.reduce((nearest: Point | null, point) => {
+    return availablePoints.reduce((nearest: Point | null, point) => {
       const distance = Math.sqrt((x - point.x) ** 2 + (y - point.y) ** 2)
       if (distance < 25 && (!nearest || distance < Math.sqrt((x - nearest.x) ** 2 + (y - nearest.y) ** 2))) {
         return point
       }
       return nearest
     }, null)
-    
-    if (result) {
-      console.log('Point le plus proche trouvé:', result)
-    }
-    
-    return result
   }
 
   private getDeadZoneBorderPoints(deadZone: DeadZone): Point[] {
@@ -549,7 +534,7 @@ export default class CanvasManager {
       }
     })
 
-    // Filtrer les doublons
+    // Filtrer les doublons avec Map pour performance optimale
     const uniquePoints = new Map<string, Point>()
     points.forEach(point => {
       const key = `${point.x},${point.y}`
@@ -558,9 +543,7 @@ export default class CanvasManager {
       }
     })
 
-    const result = Array.from(uniquePoints.values())
-    console.log('Points de bordure deadZone calculés:', result)
-    return result
+    return Array.from(uniquePoints.values())
   }
 
   private setupButtons(): void {
@@ -568,7 +551,6 @@ export default class CanvasManager {
       this.startPoint = null
       this.endPoint = null
       this.redraw()
-      console.log('Reset')
     })
 
     document.getElementById('randomPathBtn')?.addEventListener('click', () => {
@@ -587,7 +569,6 @@ export default class CanvasManager {
         
         const path = this.aStar(this.startPoint, this.endPoint)
         if (path) {
-          console.log('Chemin aléatoire:', path)
           this.drawPath(path)
         }
       }
@@ -609,7 +590,6 @@ export default class CanvasManager {
     setTimeout(() => {
       const demo = this.aStar({ x: 0, y: 0 }, { x: 500, y: 500 })
       if (demo) {
-        console.log('Démo A*:', demo)
         this.drawPath(demo, 'purple', 2)
         this.drawCircle(0, 0, 6, 'purple')
         this.drawCircle(500, 500, 6, 'purple')
