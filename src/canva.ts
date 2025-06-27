@@ -712,8 +712,9 @@ export default class CanvasManager {
   /**
    * Génère des chemins aléatoires entre la bordure de la deadzone et la bordure du canevas
    * Évite les croisements en essayant différents points de destination
+x²   * Génère automatiquement le nombre maximum possible de chemins
    */
-  public setRandomPaths(numberOfPaths: number = 5): RandomPath[] {
+  public setRandomPaths(numberOfPaths?: number): RandomPath[] {
     const deadzoneBorderPoints = this.getDeadzoneBorderPoints()
     const canvasBorderPoints = this.getCanvasBorderPoints()
     const paths: RandomPath[] = []
@@ -722,7 +723,13 @@ export default class CanvasManager {
     const availableDeadzonePoints = [...deadzoneBorderPoints]
     const availableCanvasPoints = [...canvasBorderPoints]
     
-    for (let i = 0; i < numberOfPaths && availableDeadzonePoints.length > 0 && availableCanvasPoints.length > 0; i++) {
+    // Calculer le nombre maximum possible de chemins
+    const maxPossiblePaths = Math.min(availableDeadzonePoints.length, availableCanvasPoints.length)
+    const targetPaths = numberOfPaths !== undefined ? Math.min(numberOfPaths, maxPossiblePaths) : maxPossiblePaths
+    
+    console.log(`🎯 Tentative de génération de ${targetPaths} chemins (max théorique: ${maxPossiblePaths})`)
+    
+    for (let i = 0; i < targetPaths && availableDeadzonePoints.length > 0 && availableCanvasPoints.length > 0; i++) {
       // Sélection aléatoire d'un point de la deadzone
       const randomDeadzoneIndex = Math.floor(Math.random() * availableDeadzonePoints.length)
       const startPoint = availableDeadzonePoints[randomDeadzoneIndex]
@@ -782,7 +789,7 @@ export default class CanvasManager {
     }
     
     this.randomPaths = paths
-    console.log(`🎯 Génération terminée: ${paths.length}/${numberOfPaths} chemins créés sans conflit`)
+    console.log(`🎯 Génération terminée: ${paths.length}/${targetPaths} chemins créés sans conflit (max théorique: ${maxPossiblePaths})`)
     return paths
   }
 
@@ -871,7 +878,7 @@ export default class CanvasManager {
 
     document.getElementById('generateRandomPathsBtn')?.addEventListener('click', () => {
       this.clearRandomPaths()
-      this.setRandomPaths(5)
+      this.setRandomPaths() // Pas de paramètre = génération du maximum possible
       this.redraw()
       this.drawRandomPaths()
       if (this.startPoint) this.drawCircle(this.startPoint.x, this.startPoint.y, 8, 'blue')
