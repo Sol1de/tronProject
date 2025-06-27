@@ -236,17 +236,7 @@ export default class CanvasRenderer {
     }
   }
 
-  /**
-   * Dessine des points spéciaux avec des couleurs différentes
-   */
-  public drawSpecialPoints(startPoint?: Point, endPoint?: Point): void {
-    if (startPoint) {
-      this.drawCircle(startPoint.x, startPoint.y, 8, 'blue')
-    }
-    if (endPoint) {
-      this.drawCircle(endPoint.x, endPoint.y, 8, 'red')
-    }
-  }
+
 
   /**
    * Sauvegarde l'état actuel du contexte

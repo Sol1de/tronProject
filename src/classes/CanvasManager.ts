@@ -232,9 +232,6 @@ export default class CanvasManager {
     this.showGrid = !this.showGrid
     this.redraw()
     this.drawRandomPaths()
-    const startPoint = this.interactionHandler.getStartPoint()
-    const endPoint = this.interactionHandler.getEndPoint()
-    this.renderer.drawSpecialPoints(startPoint || undefined, endPoint || undefined)
   }
 
   /**
