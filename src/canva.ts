@@ -713,7 +713,9 @@ export default class CanvasManager {
    * Génère des chemins aléatoires entre la bordure de la deadzone et la bordure du canevas
    * Évite les croisements en essayant différents points de destination
    * Génère automatiquement le nombre maximum possible de chemins
-   * Quand les points de bordure deadzone sont épuisés, utilise les points les plus proches de la deadzone
+   * Phase 1: Points bordure deadzone vers bordure canvas
+   * Phase 2: Points proches deadzone vers bordure canvas
+   * Phase 3: Points éloignés (proches bordure canvas) vers points proches deadzone
    */
   public setRandomPaths(numberOfPaths?: number): RandomPath[] {
     const deadzoneBorderPoints = this.getDeadzoneBorderPoints()
@@ -740,6 +742,7 @@ export default class CanvasManager {
     
     let pathIndex = 0
     
+    // Phase 1 et 2: Points deadzone/proximité vers bordure canvas
     while (pathIndex < targetPaths && availableCanvasPoints.length > 0) {
       let startPoint: PathPoint
       let isUsingBorderPoint = false
@@ -761,9 +764,9 @@ export default class CanvasManager {
         isUsingBorderPoint = false
         console.log(`🎯 Chemin ${pathIndex + 1}: Utilisation d'un point proche de la deadzone (distance: ${this.getDistanceToDeadzone(selectedPoint).toFixed(1)})`)
       } 
-      // Phase 3: Plus de points disponibles
+      // Fin des phases 1 et 2
       else {
-        console.log(`🚫 Plus de points de départ disponibles`)
+        console.log(`🔄 Fin des phases 1 et 2. Passage à la phase 3...`)
         break
       }
       
@@ -844,8 +847,99 @@ export default class CanvasManager {
       }
     }
     
+    // Phase 3: Points éloignés vers points proches deadzone
+    console.log(`🚀 Début de la Phase 3: Points éloignés → Points proches deadzone`)
+    
+    // Récupérer les points de bordure deadzone et proximité non utilisés
+    let availableDeadzonePointsPhase3 = deadzoneBorderPoints.filter(p => !p.isUsed)
+    let availableProximityPointsPhase3 = proximityPoints.filter(p => !p.isUsed)
+    
+    // Obtenir les points éloignés (ordre inverse de proximité)
+    const distantPoints = [...proximityPoints].reverse().filter(p => !p.isUsed)
+    let availableDistantPoints = [...distantPoints]
+    
+    console.log(`📍 Points éloignés disponibles: ${availableDistantPoints.length}`)
+    console.log(`📍 Points deadzone border disponibles: ${availableDeadzonePointsPhase3.length}`)
+    console.log(`📍 Points proximité disponibles: ${availableProximityPointsPhase3.length}`)
+    
+    while (availableDistantPoints.length > 0 && 
+           (availableDeadzonePointsPhase3.length > 0 || availableProximityPointsPhase3.length > 0)) {
+      
+      // Sélectionner un point de départ éloigné
+      const topDistantCount = Math.min(10, availableDistantPoints.length)
+      const randomDistantIndex = Math.floor(Math.random() * topDistantCount)
+      const startPoint = availableDistantPoints[randomDistantIndex]
+      
+      let endPoint: PathPoint | null = null
+      let isUsingDeadzonePoint = false
+      
+      // Prioriser les points de bordure deadzone, puis les points proches
+      if (availableDeadzonePointsPhase3.length > 0) {
+        const randomDeadzoneIndex = Math.floor(Math.random() * availableDeadzonePointsPhase3.length)
+        endPoint = availableDeadzonePointsPhase3[randomDeadzoneIndex]
+        isUsingDeadzonePoint = true
+        console.log(`🎯 Phase 3 - Chemin ${pathIndex + 1}: Point éloigné (distance: ${this.getDistanceToDeadzone(startPoint).toFixed(1)}) → Bordure deadzone`)
+      } else if (availableProximityPointsPhase3.length > 0) {
+        const topClosestCount = Math.min(5, availableProximityPointsPhase3.length)
+        const randomProximityIndex = Math.floor(Math.random() * topClosestCount)
+        endPoint = availableProximityPointsPhase3[randomProximityIndex]
+        isUsingDeadzonePoint = false
+        console.log(`🎯 Phase 3 - Chemin ${pathIndex + 1}: Point éloigné (distance: ${this.getDistanceToDeadzone(startPoint).toFixed(1)}) → Point proche deadzone`)
+      }
+      
+      if (!endPoint) {
+        console.log(`🚫 Aucun point d'arrivée disponible en Phase 3`)
+        break
+      }
+      
+      // Calcul du chemin avec A*
+      const path = this.aStar(startPoint, endPoint)
+      
+      if (path && !this.doesPathIntersectWithExisting(path, paths)) {
+        // Chemin valide trouvé !
+        paths.push({
+          startPath: { x: startPoint.x, y: startPoint.y },
+          endPath: { x: endPoint.x, y: endPoint.y },
+          path: path
+        })
+        
+        // Marquer les points comme utilisés
+        startPoint.isUsed = true
+        endPoint.isUsed = true
+        
+        // Retirer les points des listes disponibles
+        const distantIndex = availableDistantPoints.findIndex(p => p.x === startPoint.x && p.y === startPoint.y)
+        if (distantIndex !== -1) {
+          availableDistantPoints.splice(distantIndex, 1)
+        }
+        
+        if (isUsingDeadzonePoint) {
+          const deadzoneIndex = availableDeadzonePointsPhase3.findIndex(p => p.x === endPoint.x && p.y === endPoint.y)
+          if (deadzoneIndex !== -1) {
+            availableDeadzonePointsPhase3.splice(deadzoneIndex, 1)
+          }
+        } else {
+          const proximityIndex = availableProximityPointsPhase3.findIndex(p => p.x === endPoint.x && p.y === endPoint.y)
+          if (proximityIndex !== -1) {
+            availableProximityPointsPhase3.splice(proximityIndex, 1)
+          }
+        }
+        
+        pathIndex++
+        console.log(`✅ Phase 3 - Chemin ${pathIndex} créé sans conflit`)
+      } else {
+        console.log(`❌ Phase 3 - Chemin impossible ou en conflit, retrait du point de départ`)
+        // Retirer le point de départ pour éviter de le réessayer
+        const distantIndex = availableDistantPoints.findIndex(p => p.x === startPoint.x && p.y === startPoint.y)
+        if (distantIndex !== -1) {
+          availableDistantPoints.splice(distantIndex, 1)
+        }
+      }
+    }
+    
     this.randomPaths = paths
-    console.log(`🎯 Génération terminée: ${paths.length}/${targetPaths} chemins créés sans conflit`)
+    console.log(`🎯 Génération terminée: ${paths.length} chemins créés sans conflit`)
+    console.log(`🏁 Phase 3 terminée: Plus de chemins disponibles`)
     return paths
   }
 
