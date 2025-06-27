@@ -644,21 +644,37 @@ export default class CanvasManager {
 
   /**
    * Vérifie si un chemin croise, touche ou partage des points avec les chemins existants
+   * Paramètre allowStartPointIntersection: autorise l'intersection au point de départ (Phase 3)
    */
-  private doesPathIntersectWithExisting(newPath: Point[], existingPaths: RandomPath[]): boolean {
+  private doesPathIntersectWithExisting(newPath: Point[], existingPaths: RandomPath[], allowStartPointIntersection: boolean = false): boolean {
     if (newPath.length < 2) return false
     
     for (const existingPath of existingPaths) {
       if (!existingPath.path || existingPath.path.length < 2) continue
       
-      // 1. Vérifier si les chemins partagent des points communs (sauf les points de départ/arrivée sur les bordures)
-      for (let i = 1; i < newPath.length - 1; i++) { // Ignorer les points de départ et d'arrivée
+      // 1. Vérifier si les chemins partagent des points communs
+      for (let i = 0; i < newPath.length; i++) {
         const newPoint = newPath[i]
+        const isStartPoint = i === 0
+        const isEndPoint = i === newPath.length - 1
         
-        for (let j = 1; j < existingPath.path.length - 1; j++) { // Ignorer les points de départ et d'arrivée
+        for (let j = 0; j < existingPath.path.length; j++) {
           const existingPoint = existingPath.path[j]
+          const isExistingStartPoint = j === 0
+          const isExistingEndPoint = j === existingPath.path.length - 1
           
           if (this.arePointsEqual(newPoint, existingPoint)) {
+            // Cas spécial Phase 3: autoriser l'intersection au point de départ seulement
+            if (allowStartPointIntersection && isStartPoint && !isExistingStartPoint && !isExistingEndPoint) {
+              console.log(`🔍 Intersection autorisée au point de départ Phase 3: (${newPoint.x}, ${newPoint.y})`)
+              continue
+            }
+            
+            // Ignorer les intersections aux points de bordure (départ/arrivée) pour les phases 1-2
+            if (!allowStartPointIntersection && (isStartPoint || isEndPoint) && (isExistingStartPoint || isExistingEndPoint)) {
+              continue
+            }
+            
             console.log(`🔍 Conflit détecté: point partagé à (${newPoint.x}, ${newPoint.y})`)
             return true
           }
@@ -669,12 +685,22 @@ export default class CanvasManager {
       for (let i = 0; i < newPath.length - 1; i++) {
         const newSegmentStart = newPath[i]
         const newSegmentEnd = newPath[i + 1]
+        const isFirstSegment = i === 0
         
         for (let j = 0; j < existingPath.path.length - 1; j++) {
           const existingSegmentStart = existingPath.path[j]
           const existingSegmentEnd = existingPath.path[j + 1]
           
           if (this.doLinesIntersectOrTouch(newSegmentStart, newSegmentEnd, existingSegmentStart, existingSegmentEnd)) {
+            // Cas spécial Phase 3: autoriser le croisement au premier segment si le point de départ est sur le path existant
+            if (allowStartPointIntersection && isFirstSegment) {
+              const startPointOnExistingPath = this.isPointOnSegment(newSegmentStart, existingSegmentStart, existingSegmentEnd)
+              if (startPointOnExistingPath) {
+                console.log(`🔍 Croisement autorisé au premier segment Phase 3`)
+                continue
+              }
+            }
+            
             console.log(`🔍 Conflit détecté: segments se touchent/croisent`)
             console.log(`  Nouveau: (${newSegmentStart.x},${newSegmentStart.y}) -> (${newSegmentEnd.x},${newSegmentEnd.y})`)
             console.log(`  Existant: (${existingSegmentStart.x},${existingSegmentStart.y}) -> (${existingSegmentEnd.x},${existingSegmentEnd.y})`)
@@ -688,13 +714,21 @@ export default class CanvasManager {
       
       for (let i = 0; i < newPath.length; i++) {
         const newPoint = newPath[i]
+        const isStartPoint = i === 0
         
         for (let j = 0; j < existingPath.path.length; j++) {
           const existingPoint = existingPath.path[j]
+          const isExistingStartPoint = j === 0
+          const isExistingEndPoint = j === existingPath.path.length - 1
+          
+          // Cas spécial Phase 3: ignorer la distance au point de départ si c'est autorisé
+          if (allowStartPointIntersection && isStartPoint && !isExistingStartPoint && !isExistingEndPoint) {
+            continue
+          }
           
           // Ne pas vérifier la distance pour les points de bordure (départ/arrivée)
           const isNewPointBorder = (i === 0 || i === newPath.length - 1)
-          const isExistingPointBorder = (j === 0 || j === existingPath.path.length - 1)
+          const isExistingPointBorder = (isExistingStartPoint || isExistingEndPoint)
           
           if (!isNewPointBorder && !isExistingPointBorder) {
             const distance = this.getPointDistance(newPoint, existingPoint)
@@ -850,99 +884,59 @@ export default class CanvasManager {
       }
     }
     
-    // Phase 3: Points éloignés vers points proches deadzone
-    console.log(`🚀 Début de la Phase 3: Points éloignés → Points proches deadzone`)
+    // Phase 3: Chemins depuis points intérieurs de la grille
+    console.log(`🚀 Début de la Phase 3: Points intérieurs → Points accessibles`)
     
-    // Récupérer les points de bordure deadzone et proximité non utilisés
-    let availableDeadzonePointsPhase3 = deadzoneBorderPoints.filter(p => !p.isUsed)
-    let availableProximityPointsPhase3 = proximityPoints.filter(p => !p.isUsed)
+    // Obtenir tous les points de départ possibles pour la Phase 3
+    const phase3StartPoints = this.getPhase3StartPoints(paths, deadzoneBorderPoints, canvasBorderPoints)
+    console.log(`📍 Points de départ Phase 3 disponibles: ${phase3StartPoints.length}`)
     
-    // Obtenir les points éloignés (ordre inverse de proximité)
-    const distantPoints = [...proximityPoints].reverse().filter(p => !p.isUsed)
-    let availableDistantPoints = [...distantPoints]
+    // Trier par "isolement" (stratégie d'optimisation)
+    const sortedPhase3Points = this.sortPointsByIsolation(phase3StartPoints, paths)
     
-    console.log(`📍 Points éloignés disponibles: ${availableDistantPoints.length}`)
-    console.log(`📍 Points deadzone border disponibles: ${availableDeadzonePointsPhase3.length}`)
-    console.log(`📍 Points proximité disponibles: ${availableProximityPointsPhase3.length}`)
+    let availablePhase3Points = [...sortedPhase3Points]
     
-    while (availableDistantPoints.length > 0 && 
-           (availableDeadzonePointsPhase3.length > 0 || availableProximityPointsPhase3.length > 0)) {
+    while (availablePhase3Points.length > 0 && pathIndex < targetPaths) {
+      // Sélectionner un point de départ (les plus isolés en premier)
+      const startPoint = availablePhase3Points[0]
+      availablePhase3Points.shift()
       
-      // Sélectionner un point de départ éloigné
-      const topDistantCount = Math.min(10, availableDistantPoints.length)
-      const randomDistantIndex = Math.floor(Math.random() * topDistantCount)
-      const startPoint = availableDistantPoints[randomDistantIndex]
+      console.log(`🎯 Phase 3 - Chemin ${pathIndex + 1}: Départ depuis point intérieur (${startPoint.x}, ${startPoint.y})`)
       
-      let endPoint: PathPoint | null = null
-      let isUsingDeadzonePoint = false
+      // Essayer de trouver un point d'arrivée valide
+      const validEndPoint = this.findValidEndPointForPhase3(startPoint, paths)
       
-      // Prioriser les points de bordure deadzone, puis les points proches
-      if (availableDeadzonePointsPhase3.length > 0) {
-        const randomDeadzoneIndex = Math.floor(Math.random() * availableDeadzonePointsPhase3.length)
-        endPoint = availableDeadzonePointsPhase3[randomDeadzoneIndex]
-        isUsingDeadzonePoint = true
-        console.log(`🎯 Phase 3 - Chemin ${pathIndex + 1}: Point éloigné (distance: ${this.getDistanceToDeadzone(startPoint).toFixed(1)}) → Bordure deadzone`)
-      } else if (availableProximityPointsPhase3.length > 0) {
-        const topClosestCount = Math.min(5, availableProximityPointsPhase3.length)
-        const randomProximityIndex = Math.floor(Math.random() * topClosestCount)
-        endPoint = availableProximityPointsPhase3[randomProximityIndex]
-        isUsingDeadzonePoint = false
-        console.log(`🎯 Phase 3 - Chemin ${pathIndex + 1}: Point éloigné (distance: ${this.getDistanceToDeadzone(startPoint).toFixed(1)}) → Point proche deadzone`)
-      }
-      
-      if (!endPoint) {
-        console.log(`🚫 Aucun point d'arrivée disponible en Phase 3`)
-        break
-      }
-      
-      // Calcul du chemin avec A*
-      const path = this.aStar(startPoint, endPoint)
-      
-      if (path && !this.doesPathIntersectWithExisting(path, paths)) {
-        // Chemin valide trouvé !
-        paths.push({
-          startPath: { x: startPoint.x, y: startPoint.y },
-          endPath: { x: endPoint.x, y: endPoint.y },
-          path: path
-        })
+      if (validEndPoint) {
+        // Calcul du chemin avec A*
+        const path = this.aStar(startPoint, validEndPoint)
         
-        // Marquer les points comme utilisés
-        startPoint.isUsed = true
-        endPoint.isUsed = true
-        
-        // Retirer les points des listes disponibles
-        const distantIndex = availableDistantPoints.findIndex(p => p.x === startPoint.x && p.y === startPoint.y)
-        if (distantIndex !== -1) {
-          availableDistantPoints.splice(distantIndex, 1)
-        }
-        
-        if (isUsingDeadzonePoint) {
-          const deadzoneIndex = availableDeadzonePointsPhase3.findIndex(p => p.x === endPoint.x && p.y === endPoint.y)
-          if (deadzoneIndex !== -1) {
-            availableDeadzonePointsPhase3.splice(deadzoneIndex, 1)
+        if (path && path.length >= 2 && !this.doesPathIntersectWithExisting(path, paths, true)) {
+          // Chemin valide trouvé !
+          paths.push({
+            startPath: { x: startPoint.x, y: startPoint.y },
+            endPath: { x: validEndPoint.x, y: validEndPoint.y },
+            path: path
+          })
+          
+          // Marquer les points comme utilisés
+          startPoint.isUsed = true
+          if ('isUsed' in validEndPoint) {
+            (validEndPoint as PathPoint).isUsed = true
           }
+          
+          pathIndex++
+          console.log(`✅ Phase 3 - Chemin ${pathIndex} créé (longueur: ${path.length} points)`)
         } else {
-          const proximityIndex = availableProximityPointsPhase3.findIndex(p => p.x === endPoint.x && p.y === endPoint.y)
-          if (proximityIndex !== -1) {
-            availableProximityPointsPhase3.splice(proximityIndex, 1)
-          }
+          console.log(`❌ Phase 3 - Chemin impossible ou en conflit depuis (${startPoint.x}, ${startPoint.y})`)
         }
-        
-        pathIndex++
-        console.log(`✅ Phase 3 - Chemin ${pathIndex} créé sans conflit`)
       } else {
-        console.log(`❌ Phase 3 - Chemin impossible ou en conflit, retrait du point de départ`)
-        // Retirer le point de départ pour éviter de le réessayer
-        const distantIndex = availableDistantPoints.findIndex(p => p.x === startPoint.x && p.y === startPoint.y)
-        if (distantIndex !== -1) {
-          availableDistantPoints.splice(distantIndex, 1)
-        }
+        console.log(`❌ Phase 3 - Aucun point d'arrivée valide trouvé depuis (${startPoint.x}, ${startPoint.y})`)
       }
     }
     
     this.randomPaths = paths
     console.log(`🎯 Génération terminée: ${paths.length} chemins créés sans conflit`)
-    console.log(`🏁 Phase 3 terminée: Plus de chemins disponibles`)
+    console.log(`🏁 Toutes les phases terminées`)
     return paths
   }
 
@@ -1145,6 +1139,144 @@ Consultez la console pour plus de détails.`
     })
     
     return availablePoints
+  }
+
+  /**
+   * Retourne tous les points de départ possibles pour la Phase 3
+   * Exclut : bordures canvas, bordures deadzone, points de départ/arrivée des paths existants
+   */
+  private getPhase3StartPoints(existingPaths: RandomPath[], deadzoneBorderPoints: PathPoint[], canvasBorderPoints: PathPoint[]): PathPoint[] {
+    // Récupérer tous les points de départ et d'arrivée des paths existants
+    const usedStartEndPoints = new Set<string>()
+    existingPaths.forEach(path => {
+      usedStartEndPoints.add(`${path.startPath.x},${path.startPath.y}`)
+      usedStartEndPoints.add(`${path.endPath.x},${path.endPath.y}`)
+    })
+    
+    // Créer des Sets pour les points à exclure
+    const deadzoneBorderSet = new Set<string>()
+    deadzoneBorderPoints.forEach(point => {
+      deadzoneBorderSet.add(`${point.x},${point.y}`)
+    })
+    
+    const canvasBorderSet = new Set<string>()
+    canvasBorderPoints.forEach(point => {
+      canvasBorderSet.add(`${point.x},${point.y}`)
+    })
+    
+    // Filtrer tous les points de la grille
+    const availablePoints: PathPoint[] = this.gridPoints
+      .filter(point => {
+        const pointKey = `${point.x},${point.y}`
+        
+        // Exclure si dans la deadzone
+        if (this.deadZone && this.isPointInDeadZone(point.x, point.y, this.deadZone)) {
+          return false
+        }
+        
+        // Exclure les bordures du canvas
+        if (canvasBorderSet.has(pointKey)) {
+          return false
+        }
+        
+        // Exclure les bordures de la deadzone
+        if (deadzoneBorderSet.has(pointKey)) {
+          return false
+        }
+        
+        // Exclure les points de départ/arrivée des paths existants
+        if (usedStartEndPoints.has(pointKey)) {
+          return false
+        }
+        
+        return true
+      })
+      .map(point => ({ ...point, isUsed: false }))
+    
+    return availablePoints
+  }
+
+  /**
+   * Trie les points par "isolement" (distance aux points de départ/arrivée existants)
+   * Les points les plus isolés sont retournés en premier
+   */
+  private sortPointsByIsolation(points: PathPoint[], existingPaths: RandomPath[]): PathPoint[] {
+    // Récupérer tous les points de départ et d'arrivée des paths existants
+    const startEndPoints: Point[] = []
+    existingPaths.forEach(path => {
+      startEndPoints.push(path.startPath)
+      startEndPoints.push(path.endPath)
+    })
+    
+    if (startEndPoints.length === 0) {
+      // Si aucun path existant, retourner dans l'ordre d'origine
+      return [...points]
+    }
+    
+    // Calculer la distance minimale aux points existants pour chaque point
+    const pointsWithDistance = points.map(point => {
+      let minDistance = Infinity
+      
+      startEndPoints.forEach(existingPoint => {
+        const distance = this.getPointDistance(point, existingPoint)
+        if (distance < minDistance) {
+          minDistance = distance
+        }
+      })
+      
+      return {
+        point: point,
+        isolationDistance: minDistance
+      }
+    })
+    
+    // Trier par distance d'isolement décroissante (plus isolé = plus grande distance)
+    pointsWithDistance.sort((a, b) => b.isolationDistance - a.isolationDistance)
+    
+    return pointsWithDistance.map(item => item.point)
+  }
+
+  /**
+   * Cherche un point d'arrivée valide pour un point de départ donné en Phase 3
+   * Essaie plusieurs candidats pour maximiser les chances de succès
+   */
+  private findValidEndPointForPhase3(startPoint: PathPoint, existingPaths: RandomPath[]): Point | null {
+    // Obtenir tous les points de grille possibles (sauf ceux dans la deadzone)
+    const allCandidates = this.gridPoints.filter(point => {
+      // Exclure le point de départ lui-même
+      if (point.x === startPoint.x && point.y === startPoint.y) {
+        return false
+      }
+      
+      // Exclure si dans la deadzone
+      if (this.deadZone && this.isPointInDeadZone(point.x, point.y, this.deadZone)) {
+        return false
+      }
+      
+      return true
+    })
+    
+    // Mélanger l'ordre pour tester différents candidats
+    const shuffledCandidates = [...allCandidates].sort(() => Math.random() - 0.5)
+    
+    // Essayer plusieurs candidats
+    const maxCandidates = Math.min(20, shuffledCandidates.length)
+    
+    for (let i = 0; i < maxCandidates; i++) {
+      const candidate = shuffledCandidates[i]
+      
+      // Vérifier qu'un chemin A* existe
+      const testPath = this.aStar(startPoint, candidate)
+      
+      if (testPath && testPath.length >= 2) {
+        // Vérifier que le chemin ne croise pas les paths existants (avec autorisation au point de départ)
+        if (!this.doesPathIntersectWithExisting(testPath, existingPaths, true)) {
+          return candidate
+        }
+      }
+    }
+    
+    return null
   }
 
   // Getters and setters
