@@ -345,15 +345,61 @@ export default class CanvasManager {
   }
 
   private getNeighbors(point: Point): Point[] {
+    // Créer une liste combinée incluant les points de bordure de deadZone
+    const allValidPoints = [...this.gridPoints]
+    if (this.deadZone) {
+      const deadZoneBorderPoints = this.getDeadZoneBorderPoints(this.deadZone)
+      for (const borderPoint of deadZoneBorderPoints) {
+        const exists = allValidPoints.some(p => p.x === borderPoint.x && p.y === borderPoint.y)
+        if (!exists) {
+          allValidPoints.push(borderPoint)
+        }
+      }
+    }
+    
+    // Essayer d'abord la méthode classique (directions fixes)
     const directions = [
       [0, -this.gridSizeHeight], [this.gridSizeWidth, 0], [0, this.gridSizeHeight], [-this.gridSizeWidth, 0],
       [this.gridSizeWidth, -this.gridSizeHeight], [this.gridSizeWidth, this.gridSizeHeight], 
       [-this.gridSizeWidth, this.gridSizeHeight], [-this.gridSizeWidth, -this.gridSizeHeight]
     ]
     
-    return directions
+    const classicNeighbors = directions
       .map(([dx, dy]) => ({ x: point.x + dx, y: point.y + dy }))
-      .filter(neighbor => this.gridPoints.some(p => p.x === neighbor.x && p.y === neighbor.y))
+      .filter(neighbor => 
+        allValidPoints.some(p => p.x === neighbor.x && p.y === neighbor.y) &&
+        (!this.deadZone || !this.isPointInDeadZone(neighbor.x, neighbor.y, this.deadZone))
+      )
+    
+    // Si la méthode classique trouve des voisins, l'utiliser
+    if (classicNeighbors.length > 0) {
+      console.log(`Voisins trouvés (méthode classique) pour (${point.x}, ${point.y}):`, classicNeighbors)
+      return classicNeighbors
+    }
+    
+    // Sinon, utiliser la méthode flexible pour les points problématiques
+    console.log(`Méthode classique échouée pour (${point.x}, ${point.y}), utilisation de la méthode flexible`)
+    
+    const flexibleNeighbors = allValidPoints.filter(candidate => {
+      if (candidate.x === point.x && candidate.y === point.y) return false
+      
+      // Calculer la distance
+      const dx = Math.abs(candidate.x - point.x)
+      const dy = Math.abs(candidate.y - point.y)
+      
+      // Accepter les connexions dans un rayon raisonnable
+      const maxDistance = Math.max(this.gridSizeWidth, this.gridSizeHeight) * 1.5
+      const distance = Math.sqrt(dx * dx + dy * dy)
+      
+      const isReasonableDistance = distance <= maxDistance && distance > 0
+      const isValid = isReasonableDistance &&
+        (!this.deadZone || !this.isPointInDeadZone(candidate.x, candidate.y, this.deadZone))
+      
+      return isValid
+    })
+    
+    console.log(`Voisins trouvés (méthode flexible) pour (${point.x}, ${point.y}):`, flexibleNeighbors)
+    return flexibleNeighbors
   }
 
   public drawPath(chemin: Point[], strokeStyle: string = 'green', lineWidth: number = 3): void {
@@ -421,13 +467,100 @@ export default class CanvasManager {
   }
 
   private findNearestGridPoint(x: number, y: number): Point | null {
-    return this.gridPoints.reduce((nearest: Point | null, point) => {
+    // Créer une liste combinée de tous les points disponibles
+    const availablePoints = [...this.gridPoints]
+    
+    // Si une deadZone existe, ajouter les points de bordure qui ne sont pas déjà dans gridPoints
+    if (this.deadZone) {
+      const deadZoneBorderPoints = this.getDeadZoneBorderPoints(this.deadZone)
+      console.log('Points de bordure deadZone générés:', deadZoneBorderPoints)
+      
+      for (const borderPoint of deadZoneBorderPoints) {
+        const exists = this.gridPoints.some(p => p.x === borderPoint.x && p.y === borderPoint.y)
+        if (!exists) {
+          availablePoints.push(borderPoint)
+          console.log('Point de bordure ajouté:', borderPoint)
+        }
+      }
+    }
+
+    // Chercher le point le plus proche dans la liste combinée
+    const result = availablePoints.reduce((nearest: Point | null, point) => {
       const distance = Math.sqrt((x - point.x) ** 2 + (y - point.y) ** 2)
       if (distance < 25 && (!nearest || distance < Math.sqrt((x - nearest.x) ** 2 + (y - nearest.y) ** 2))) {
         return point
       }
       return nearest
     }, null)
+    
+    if (result) {
+      console.log('Point le plus proche trouvé:', result)
+    }
+    
+    return result
+  }
+
+  private getDeadZoneBorderPoints(deadZone: DeadZone): Point[] {
+    const points: Point[] = []
+    const halfWidth = deadZone.deadZoneWidth / 2
+    const halfHeight = deadZone.deadZoneHeight / 2
+    const bounds = {
+      left: deadZone.basePoint.x - halfWidth,
+      right: deadZone.basePoint.x + halfWidth,
+      top: deadZone.basePoint.y - halfHeight,
+      bottom: deadZone.basePoint.y + halfHeight
+    }
+
+    // Points sur les bordures horizontales (haut/bas) - alignés sur la grille
+    for (let x = Math.ceil(bounds.left / this.gridSizeWidth) * this.gridSizeWidth; x <= bounds.right; x += this.gridSizeWidth) {
+      if (x >= bounds.left && x <= bounds.right && x >= 0 && x <= this.width) {
+        if (bounds.top >= 0 && bounds.top <= this.height) {
+          points.push({ x, y: bounds.top })
+        }
+        if (bounds.bottom >= 0 && bounds.bottom <= this.height) {
+          points.push({ x, y: bounds.bottom })
+        }
+      }
+    }
+
+    // Points sur les bordures verticales (gauche/droite) - alignés sur la grille
+    for (let y = Math.ceil(bounds.top / this.gridSizeHeight) * this.gridSizeHeight; y <= bounds.bottom; y += this.gridSizeHeight) {
+      if (y >= bounds.top && y <= bounds.bottom && y >= 0 && y <= this.height) {
+        if (bounds.left >= 0 && bounds.left <= this.width) {
+          points.push({ x: bounds.left, y })
+        }
+        if (bounds.right >= 0 && bounds.right <= this.width) {
+          points.push({ x: bounds.right, y })
+        }
+      }
+    }
+
+    // Ajouter les coins exacts de la deadZone (seulement s'ils sont dans les limites du canvas)
+    const corners = [
+      { x: bounds.left, y: bounds.top },
+      { x: bounds.right, y: bounds.top },
+      { x: bounds.left, y: bounds.bottom },
+      { x: bounds.right, y: bounds.bottom }
+    ]
+    
+    corners.forEach(corner => {
+      if (corner.x >= 0 && corner.x <= this.width && corner.y >= 0 && corner.y <= this.height) {
+        points.push(corner)
+      }
+    })
+
+    // Filtrer les doublons
+    const uniquePoints = new Map<string, Point>()
+    points.forEach(point => {
+      const key = `${point.x},${point.y}`
+      if (!uniquePoints.has(key)) {
+        uniquePoints.set(key, point)
+      }
+    })
+
+    const result = Array.from(uniquePoints.values())
+    console.log('Points de bordure deadZone calculés:', result)
+    return result
   }
 
   private setupButtons(): void {
