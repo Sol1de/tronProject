@@ -1,5 +1,5 @@
 import './style.css'
-import CanvasManager from './canva.ts'
+import CanvasManager from './classes/CanvasManager'
 
 document.querySelector<HTMLDivElement>('#app')!.innerHTML = /*html*/`
   <div class="flex flex-col justify-center items-center h-screen gap-4">
@@ -37,6 +37,6 @@ document.querySelector<HTMLDivElement>('#app')!.innerHTML = /*html*/`
 `
 
 const canvas = CanvasManager.initCanvas()
-const gridConfig = canvas.initGrid(50, 50, 200, 150, {x: 300, y: 300})
+canvas.initGrid(50, 50, 200, 150, {x: 300, y: 300})
 canvas.setupInteractivePathfinding()
 canvas.drawRandomPaths()

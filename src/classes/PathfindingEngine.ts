@@ -1,9 +1,13 @@
-import MathUtils from '../utils/MathUtils'
-import type GridManager from '../grid/GridManager'
-import type { Point, DeadZone } from '../types'
+import MathUtils from './MathUtils'
+import type GridManager from './GridManager'
+import type { Point } from '../types'
 
 export default class PathfindingEngine {
-  constructor(private gridManager: GridManager) {}
+  private gridManager: GridManager
+
+  constructor(gridManager: GridManager) {
+    this.gridManager = gridManager
+  }
 
   /**
    * Algorithme A* pour trouver le chemin optimal entre deux points
@@ -148,7 +152,7 @@ export default class PathfindingEngine {
   /**
    * Calcule plusieurs chemins alternatifs entre deux points
    */
-  public findAlternativePaths(start: Point, end: Point, maxAlternatives: number = 3): Point[][] {
+  public findAlternativePaths(start: Point, end: Point, _maxAlternatives: number = 3): Point[][] {
     const paths: Point[][] = []
     
     // Premier chemin standard

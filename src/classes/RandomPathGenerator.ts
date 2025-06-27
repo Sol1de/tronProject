@@ -1,13 +1,19 @@
-import MathUtils from '../utils/MathUtils'
-import type GridManager from '../grid/GridManager'
+import MathUtils from './MathUtils'
+import type GridManager from './GridManager'
 import type PathfindingEngine from './PathfindingEngine'
 import type { Point, PathPoint, RandomPath } from '../types'
 
 export default class RandomPathGenerator {
+  private gridManager: GridManager
+  private pathfindingEngine: PathfindingEngine
+
   constructor(
-    private gridManager: GridManager,
-    private pathfindingEngine: PathfindingEngine
-  ) {}
+    gridManager: GridManager,
+    pathfindingEngine: PathfindingEngine
+  ) {
+    this.gridManager = gridManager
+    this.pathfindingEngine = pathfindingEngine
+  }
 
   /**
    * Génère des chemins aléatoires entre la bordure de la deadzone et la bordure du canevas

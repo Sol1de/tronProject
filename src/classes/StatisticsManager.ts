@@ -1,8 +1,12 @@
-import type GridManager from '../grid/GridManager'
-import type { RandomPath, StatisticsData, PathPoint } from '../types'
+import type GridManager from './GridManager'
+import type { RandomPath, StatisticsData } from '../types'
 
 export default class StatisticsManager {
-  constructor(private gridManager: GridManager) {}
+  private gridManager: GridManager
+
+  constructor(gridManager: GridManager) {
+    this.gridManager = gridManager
+  }
 
   /**
    * Calcule les statistiques complètes des chemins aléatoires

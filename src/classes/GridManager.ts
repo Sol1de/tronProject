@@ -1,4 +1,4 @@
-import MathUtils from '../utils/MathUtils'
+import MathUtils from './MathUtils'
 import type { Point, DeadZone, PathPoint, GridConfig } from '../types'
 
 export default class GridManager {

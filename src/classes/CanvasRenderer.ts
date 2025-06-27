@@ -1,10 +1,16 @@
 import type { Point, RandomPath } from '../types'
 
 export default class CanvasRenderer {
+  private canvas: HTMLCanvasElement
+  private context: CanvasRenderingContext2D
+
   constructor(
-    private canvas: HTMLCanvasElement,
-    private context: CanvasRenderingContext2D
-  ) {}
+    canvas: HTMLCanvasElement,
+    context: CanvasRenderingContext2D
+  ) {
+    this.canvas = canvas
+    this.context = context
+  }
 
   /**
    * Dessine une ligne entre deux points
@@ -83,7 +89,7 @@ export default class CanvasRenderer {
   /**
    * Dessine plusieurs chemins aléatoires avec des couleurs différentes
    */
-  public drawRandomPaths(randomPaths: RandomPath[], strokeStyle: string = 'orange', lineWidth: number = 2): void {
+  public drawRandomPaths(randomPaths: RandomPath[], _strokeStyle: string = 'orange', lineWidth: number = 2): void {
     randomPaths.forEach((randomPath, index) => {
       if (randomPath.path) {
         const colors = ['orange', 'cyan', 'magenta', 'lime', 'yellow', 'pink', 'lightblue', 'lightgreen']

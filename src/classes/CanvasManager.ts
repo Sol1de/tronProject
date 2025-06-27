@@ -1,11 +1,11 @@
-import MathUtils from './utils/MathUtils'
-import GridManager from './grid/GridManager'
-import PathfindingEngine from './pathfinding/PathfindingEngine'
-import RandomPathGenerator from './pathfinding/RandomPathGenerator'
-import CanvasRenderer from './rendering/CanvasRenderer'
-import InteractionHandler from './interaction/InteractionHandler'
-import StatisticsManager from './statistics/StatisticsManager'
-import type { Point, DeadZone, PathPoint, RandomPath, GridConfig, StatisticsData } from './types'
+import MathUtils from './MathUtils'
+import GridManager from './GridManager'
+import PathfindingEngine from './PathfindingEngine'
+import RandomPathGenerator from './RandomPathGenerator'
+import CanvasRenderer from './CanvasRenderer'
+import InteractionHandler from './InteractionHandler'
+import StatisticsManager from './StatisticsManager'
+import type { Point, RandomPath, GridConfig, StatisticsData } from '../types'
 
 export default class CanvasManager {
   private gridManager: GridManager
@@ -17,11 +17,16 @@ export default class CanvasManager {
   private randomPaths: RandomPath[] = []
   private showGrid: boolean = false
 
+  private canvas: HTMLCanvasElement
+  private context: CanvasRenderingContext2D
+  private width: number
+  private height: number
+
   public constructor(
-    private canvas: HTMLCanvasElement,
-    private context: CanvasRenderingContext2D,
-    private width: number,
-    private height: number,
+    canvas: HTMLCanvasElement,
+    context: CanvasRenderingContext2D,
+    width: number,
+    height: number,
   ) {
     this.canvas = canvas
     this.context = context
@@ -103,13 +108,100 @@ export default class CanvasManager {
   }
 
   /**
-   * Génère des chemins aléatoires
+   * Génère des chemins aléatoires optimisés pour maximiser l'utilisation de l'espace
    */
   public setRandomPaths(numberOfPaths?: number): RandomPath[] {
     this.clearRandomPaths()
-    const newPaths = this.randomPathGenerator.generateRandomPaths(numberOfPaths)
+    
+    // Calculer le nombre optimal si non spécifié
+    const optimalCount = numberOfPaths || this.calculateOptimalPathCount()
+    const newPaths = this.randomPathGenerator.generateRandomPaths(optimalCount)
     this.randomPaths.push(...newPaths)
+    
+    // Afficher les métriques d'optimisation
+    const coverage = this.calculateSpaceCoverage()
+    console.log(`🎯 Optimisation spatiale:`)
+    console.log(`  📊 Couverture: ${(coverage * 100).toFixed(1)}%`)
+    console.log(`  📍 Chemins: ${newPaths.length}/${optimalCount}`)
+    console.log(`  ⚡ Efficacité: ${this.calculatePathEfficiency().toFixed(1)}%`)
+    
     return this.randomPaths
+  }
+
+  /**
+   * Calcule le nombre optimal de chemins selon l'espace disponible
+   */
+  private calculateOptimalPathCount(): number {
+    const allPoints = this.gridManager.getGridPoints()
+    const deadZone = this.gridManager.getDeadZone()
+    
+    const availablePoints = deadZone ? 
+      allPoints.filter(p => !this.gridManager.isPointInDeadZone(p.x, p.y, deadZone)) :
+      allPoints
+
+    // Estimation basée sur la densité optimale
+    const canvasArea = this.width * this.height
+    const gridDensity = availablePoints.length / canvasArea
+    
+    // Formule optimisée pour maximiser la couverture sans sur-densité
+    const baseCount = Math.floor(Math.sqrt(availablePoints.length) * 1.2)
+    const densityAdjustment = Math.floor(gridDensity * canvasArea * 0.0001)
+    
+    return Math.max(baseCount + densityAdjustment, 8) // Minimum 8 chemins
+  }
+
+  /**
+   * Calcule l'efficacité moyenne des chemins générés
+   */
+  private calculatePathEfficiency(): number {
+    if (this.randomPaths.length === 0) return 0
+
+    let totalEfficiency = 0
+    let validPaths = 0
+
+    this.randomPaths.forEach(path => {
+      if (path.path && path.path.length > 1) {
+        const actualLength = path.path.length - 1
+        const directDistance = MathUtils.getPointDistance(path.startPath, path.endPath)
+        
+        if (directDistance > 0) {
+          const efficiency = (directDistance / actualLength) * 100
+          totalEfficiency += efficiency
+          validPaths++
+        }
+      }
+    })
+
+    return validPaths > 0 ? totalEfficiency / validPaths : 0
+  }
+
+  /**
+   * Calcule le pourcentage de couverture spatiale
+   */
+  private calculateSpaceCoverage(): number {
+    const allGridPoints = this.gridManager.getGridPoints()
+    const coveredPoints = new Set<string>()
+    const gridSize = Math.min(this.gridManager.getGridSizeWidth(), this.gridManager.getGridSizeHeight())
+    const influenceRadius = gridSize * 1.5
+
+    this.randomPaths.forEach(path => {
+      if (path.path) {
+        path.path.forEach(pathPoint => {
+          // Point directement couvert
+          coveredPoints.add(MathUtils.getPointKey(pathPoint))
+          
+          // Zone d'influence
+          allGridPoints.forEach(gridPoint => {
+            const distance = MathUtils.getPointDistance(pathPoint, gridPoint)
+            if (distance <= influenceRadius) {
+              coveredPoints.add(MathUtils.getPointKey(gridPoint))
+            }
+          })
+        })
+      }
+    })
+
+    return coveredPoints.size / allGridPoints.length
   }
 
   /**
