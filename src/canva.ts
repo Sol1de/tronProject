@@ -102,16 +102,13 @@ export default class CanvasManager {
   }
 
   public initGrid(gridSizeWidth: number, gridSizeHeight: number, deadZoneWidth?: number, deadZoneHeight?: number, basePoint?: Point): {gridSizeWidth: number, gridSizeHeight: number, gridPoints: Point[], deadZone?: DeadZone} {
-    // Vérifier et ajuster les tailles de grille
     gridSizeWidth = this.verifyGridSize(gridSizeWidth, 'width')
     gridSizeHeight = this.verifyGridSize(gridSizeHeight, 'height')
     
-    // Initialiser la deadzone si fournie
     const deadZone = (deadZoneWidth && deadZoneHeight && basePoint) 
       ? { basePoint: { ...basePoint }, deadZoneWidth, deadZoneHeight }
       : undefined
     
-    // Utiliser un Set pour éviter les doublons plus efficacement
     const pointsSet = new Set<string>()
     const addPoint = (x: number, y: number) => {
       if (x <= this.width && y <= this.height) {
@@ -119,11 +116,9 @@ export default class CanvasManager {
       }
     }
     
-    // Calculer dimensions de grille
     const cols = Math.floor(this.width / gridSizeWidth) + 1
     const rows = Math.floor(this.height / gridSizeHeight) + 1
     
-    // Générer points de grille réguliers (hors deadzone)
     for (let col = 0; col < cols; col++) {
       for (let row = 0; row < rows; row++) {
         const x = col * gridSizeWidth
@@ -135,12 +130,10 @@ export default class CanvasManager {
       }
     }
     
-    // Ajouter points de bordure de deadzone
     if (deadZone) {
       this.addDeadZoneBorderPoints(deadZone, gridSizeWidth, gridSizeHeight, addPoint)
     }
     
-    // Convertir Set en Array
     const gridPoints = Array.from(pointsSet).map(pointStr => {
       const [x, y] = pointStr.split(',').map(Number)
       return { x, y }
@@ -174,7 +167,6 @@ export default class CanvasManager {
       bottom: deadZone.basePoint.y + halfHeight
     }
     
-    // Points sur bordures horizontales
     for (let x = Math.ceil(bounds.left / gridSizeWidth) * gridSizeWidth; x <= bounds.right; x += gridSizeWidth) {
       if (x >= bounds.left && x <= bounds.right) {
         addPoint(x, bounds.top)
@@ -182,7 +174,6 @@ export default class CanvasManager {
       }
     }
     
-    // Points sur bordures verticales  
     for (let y = Math.ceil(bounds.top / gridSizeHeight) * gridSizeHeight; y <= bounds.bottom; y += gridSizeHeight) {
       if (y >= bounds.top && y <= bounds.bottom) {
         addPoint(bounds.left, y)
