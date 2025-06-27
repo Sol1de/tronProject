@@ -2,6 +2,12 @@ type Point = { x: number; y: number }
 type DeadZone = { basePoint: Point; deadZoneWidth: number; deadZoneHeight: number }
 
 export default class CanvasManager {
+  private gridPoints: Point[] = []
+  private gridSizeWidth: number = 0
+  private gridSizeHeight: number = 0
+  private deadZone?: DeadZone
+  private startPoint: Point | null = null
+  private endPoint: Point | null = null
 
   public constructor(
     private canvas: HTMLCanvasElement,
@@ -102,10 +108,10 @@ export default class CanvasManager {
   }
 
   public initGrid(gridSizeWidth: number, gridSizeHeight: number, deadZoneWidth?: number, deadZoneHeight?: number, basePoint?: Point): {gridSizeWidth: number, gridSizeHeight: number, gridPoints: Point[], deadZone?: DeadZone} {
-    gridSizeWidth = this.verifyGridSize(gridSizeWidth, 'width')
-    gridSizeHeight = this.verifyGridSize(gridSizeHeight, 'height')
+    this.gridSizeWidth = this.verifyGridSize(gridSizeWidth, 'width')
+    this.gridSizeHeight = this.verifyGridSize(gridSizeHeight, 'height')
     
-    const deadZone = (deadZoneWidth && deadZoneHeight && basePoint) 
+    this.deadZone = (deadZoneWidth && deadZoneHeight && basePoint) 
       ? { basePoint: { ...basePoint }, deadZoneWidth, deadZoneHeight }
       : undefined
     
@@ -116,30 +122,30 @@ export default class CanvasManager {
       }
     }
     
-    const cols = Math.floor(this.width / gridSizeWidth) + 1
-    const rows = Math.floor(this.height / gridSizeHeight) + 1
+    const cols = Math.floor(this.width / this.gridSizeWidth) + 1
+    const rows = Math.floor(this.height / this.gridSizeHeight) + 1
     
     for (let col = 0; col < cols; col++) {
       for (let row = 0; row < rows; row++) {
-        const x = col * gridSizeWidth
-        const y = row * gridSizeHeight
+        const x = col * this.gridSizeWidth
+        const y = row * this.gridSizeHeight
         
-        if (!deadZone || !this.isPointInDeadZone(x, y, deadZone)) {
+        if (!this.deadZone || !this.isPointInDeadZone(x, y, this.deadZone)) {
           addPoint(x, y)
         }
       }
     }
     
-    if (deadZone) {
-      this.addDeadZoneBorderPoints(deadZone, gridSizeWidth, gridSizeHeight, addPoint)
+    if (this.deadZone) {
+      this.addDeadZoneBorderPoints(this.deadZone, this.gridSizeWidth, this.gridSizeHeight, addPoint)
     }
     
-    const gridPoints = Array.from(pointsSet).map(pointStr => {
+    this.gridPoints = Array.from(pointsSet).map(pointStr => {
       const [x, y] = pointStr.split(',').map(Number)
       return { x, y }
     })
     
-    return { gridSizeWidth, gridSizeHeight, gridPoints, deadZone }
+    return { gridSizeWidth: this.gridSizeWidth, gridSizeHeight: this.gridSizeHeight, gridPoints: this.gridPoints, deadZone: this.deadZone }
   }
 
   private isPointInDeadZone(x: number, y: number, deadZone: DeadZone): boolean {
@@ -272,6 +278,212 @@ export default class CanvasManager {
     }
   }
 
+  public aStar(debut: Point, objectif: Point): Point[] | null {
+    const openSet: Point[] = [debut]
+    const closedSet = new Set<string>()
+    const gScore = new Map<string, number>()
+    const fScore = new Map<string, number>()
+    const parent = new Map<string, Point>()
+    
+    const key = (p: Point): string => `${p.x},${p.y}`
+    const h = (p1: Point, p2: Point): number => Math.abs(p1.x - p2.x) + Math.abs(p1.y - p2.y)
+    
+    gScore.set(key(debut), 0)
+    fScore.set(key(debut), h(debut, objectif))
+    
+    while (openSet.length > 0) {
+      // Find node with lowest f_score
+      const current = openSet.reduce((best, node) => 
+        (fScore.get(key(node)) || Infinity) < (fScore.get(key(best)) || Infinity) ? node : best
+      )
+      
+      if (current.x === objectif.x && current.y === objectif.y) {
+        return this.reconstructPath(parent, current)
+      }
+      
+      openSet.splice(openSet.indexOf(current), 1)
+      closedSet.add(key(current))
+      
+      for (const neighbor of this.getNeighbors(current)) {
+        const neighborKey = key(neighbor)
+        
+        if (closedSet.has(neighborKey) || (this.deadZone && this.isPointInDeadZone(neighbor.x, neighbor.y, this.deadZone))) {
+          continue
+        }
+        
+        const tentativeG = (gScore.get(key(current)) || 0) + this.distance(current, neighbor)
+        
+        if (!openSet.some(p => key(p) === neighborKey)) {
+          openSet.push(neighbor)
+        } else if (tentativeG >= (gScore.get(neighborKey) || Infinity)) {
+          continue
+        }
+        
+        parent.set(neighborKey, current)
+        gScore.set(neighborKey, tentativeG)
+        fScore.set(neighborKey, tentativeG + h(neighbor, objectif))
+      }
+    }
+    
+    return null
+  }
+
+  private reconstructPath(parent: Map<string, Point>, current: Point): Point[] {
+    const path = [current]
+    const key = (p: Point): string => `${p.x},${p.y}`
+    
+    while (parent.has(key(current))) {
+      current = parent.get(key(current))!
+      path.unshift(current)
+    }
+    
+    return path
+  }
+
+  private distance(p1: Point, p2: Point): number {
+    return Math.sqrt((p2.x - p1.x) ** 2 + (p2.y - p1.y) ** 2)
+  }
+
+  private getNeighbors(point: Point): Point[] {
+    const directions = [
+      [0, -this.gridSizeHeight], [this.gridSizeWidth, 0], [0, this.gridSizeHeight], [-this.gridSizeWidth, 0],
+      [this.gridSizeWidth, -this.gridSizeHeight], [this.gridSizeWidth, this.gridSizeHeight], 
+      [-this.gridSizeWidth, this.gridSizeHeight], [-this.gridSizeWidth, -this.gridSizeHeight]
+    ]
+    
+    return directions
+      .map(([dx, dy]) => ({ x: point.x + dx, y: point.y + dy }))
+      .filter(neighbor => this.gridPoints.some(p => p.x === neighbor.x && p.y === neighbor.y))
+  }
+
+  public drawPath(chemin: Point[], strokeStyle: string = 'green', lineWidth: number = 3): void {
+    if (chemin.length < 2) return
+    
+    for (let i = 0; i < chemin.length - 1; i++) {
+      this.drawLine(
+        chemin[i].x, 
+        chemin[i].y, 
+        chemin[i + 1].x, 
+        chemin[i + 1].y, 
+        strokeStyle, 
+        lineWidth
+      )
+    }
+    
+    // Marquer le point de départ et d'arrivée
+    this.drawCircle(chemin[0].x, chemin[0].y, 6, 'blue')
+    this.drawCircle(chemin[chemin.length - 1].x, chemin[chemin.length - 1].y, 6, 'red')
+  }
+
+  // Interactive Pathfinding Methods
+  public setupInteractivePathfinding(): void {
+    this.canvas.addEventListener('click', this.handleCanvasClick.bind(this))
+    this.setupButtons()
+    this.redraw()
+    this.showDemo()
+  }
+
+  private handleCanvasClick(event: MouseEvent): void {
+    const rect = this.canvas.getBoundingClientRect()
+    const x = event.clientX - rect.left
+    const y = event.clientY - rect.top
+    
+    const nearestPoint = this.findNearestGridPoint(x, y)
+    
+    if (nearestPoint) {
+      if (!this.startPoint) {
+        this.startPoint = nearestPoint
+        this.redraw()
+        this.drawCircle(this.startPoint.x, this.startPoint.y, 8, 'blue')
+        console.log('Point de départ:', this.startPoint)
+      } else if (!this.endPoint) {
+        this.endPoint = nearestPoint
+        this.redraw()
+        this.drawCircle(this.startPoint.x, this.startPoint.y, 8, 'blue')
+        this.drawCircle(this.endPoint.x, this.endPoint.y, 8, 'red')
+        
+        const path = this.aStar(this.startPoint, this.endPoint)
+        if (path) {
+          console.log('Chemin trouvé:', path)
+          this.drawPath(path)
+        } else {
+          console.log('Aucun chemin trouvé!')
+          alert('Aucun chemin trouvé!')
+        }
+      } else {
+        this.startPoint = nearestPoint
+        this.endPoint = null
+        this.redraw()
+        this.drawCircle(this.startPoint.x, this.startPoint.y, 8, 'blue')
+        console.log('Nouveau départ:', this.startPoint)
+      }
+    }
+  }
+
+  private findNearestGridPoint(x: number, y: number): Point | null {
+    return this.gridPoints.reduce((nearest: Point | null, point) => {
+      const distance = Math.sqrt((x - point.x) ** 2 + (y - point.y) ** 2)
+      if (distance < 25 && (!nearest || distance < Math.sqrt((x - nearest.x) ** 2 + (y - nearest.y) ** 2))) {
+        return point
+      }
+      return nearest
+    }, null)
+  }
+
+  private setupButtons(): void {
+    document.getElementById('resetBtn')?.addEventListener('click', () => {
+      this.startPoint = null
+      this.endPoint = null
+      this.redraw()
+      console.log('Reset')
+    })
+
+    document.getElementById('randomPathBtn')?.addEventListener('click', () => {
+      if (this.gridPoints.length < 2) return
+      
+      const randomStart = this.gridPoints[Math.floor(Math.random() * this.gridPoints.length)]
+      const randomEnd = this.gridPoints[Math.floor(Math.random() * this.gridPoints.length)]
+      
+      if (randomStart !== randomEnd) {
+        this.startPoint = randomStart
+        this.endPoint = randomEnd
+        this.redraw()
+        
+        this.drawCircle(this.startPoint.x, this.startPoint.y, 8, 'blue')
+        this.drawCircle(this.endPoint.x, this.endPoint.y, 8, 'red')
+        
+        const path = this.aStar(this.startPoint, this.endPoint)
+        if (path) {
+          console.log('Chemin aléatoire:', path)
+          this.drawPath(path)
+        }
+      }
+    })
+
+    document.getElementById('clearPathBtn')?.addEventListener('click', () => {
+      this.redraw()
+      if (this.startPoint) this.drawCircle(this.startPoint.x, this.startPoint.y, 8, 'blue')
+      if (this.endPoint) this.drawCircle(this.endPoint.x, this.endPoint.y, 8, 'red')
+    })
+  }
+
+  private redraw(): void {
+    this.context.clearRect(0, 0, this.width, this.height)
+    this.drawGrid(this.gridPoints, this.gridSizeWidth, this.gridSizeHeight, this.deadZone)
+  }
+
+  private showDemo(): void {
+    setTimeout(() => {
+      const demo = this.aStar({ x: 0, y: 0 }, { x: 500, y: 500 })
+      if (demo) {
+        console.log('Démo A*:', demo)
+        this.drawPath(demo, 'purple', 2)
+        this.drawCircle(0, 0, 6, 'purple')
+        this.drawCircle(500, 500, 6, 'purple')
+      }
+    }, 500)
+  }
+
   // Getters and setters
   public getCanvas(): HTMLCanvasElement {
     return this.canvas
@@ -304,159 +516,5 @@ export default class CanvasManager {
   public setHeight(height: number): void {
     this.height = height
   }  
-
-  // A* Pathfinding Algorithm Implementation
-  public aStar(debut: Point, objectif: Point, gridPoints: Point[], gridSizeWidth: number, gridSizeHeight: number, deadZone?: DeadZone): Point[] | null {
-    // Initialisation
-    const listeOuverte: Point[] = [debut]
-    const listeFermee: Point[] = []
-    
-    const gScore = new Map<string, number>()
-    const fScore = new Map<string, number>()
-    const parent = new Map<string, Point | null>()
-    
-    const pointKey = (point: Point): string => `${point.x},${point.y}`
-    
-    gScore.set(pointKey(debut), 0)
-    fScore.set(pointKey(debut), this.heuristique(debut, objectif))
-    parent.set(pointKey(debut), null)
-    
-    while (listeOuverte.length > 0) {
-      // Sélectionner le nœud avec le plus petit f_score
-      let noeudCourant = listeOuverte[0]
-      let indexCourant = 0
-      
-      for (let i = 1; i < listeOuverte.length; i++) {
-        const currentFScore = fScore.get(pointKey(listeOuverte[i])) || Infinity
-        const bestFScore = fScore.get(pointKey(noeudCourant)) || Infinity
-        
-        if (currentFScore < bestFScore) {
-          noeudCourant = listeOuverte[i]
-          indexCourant = i
-        }
-      }
-      
-      // Si on a atteint l'objectif
-      if (noeudCourant.x === objectif.x && noeudCourant.y === objectif.y) {
-        return this.reconstruireChemin(parent, objectif)
-      }
-      
-      // Déplacer le nœud courant vers la liste fermée
-      listeOuverte.splice(indexCourant, 1)
-      listeFermee.push(noeudCourant)
-      
-      // Examiner tous les voisins
-      const voisins = this.getVoisins(noeudCourant, gridPoints, gridSizeWidth, gridSizeHeight)
-      
-      for (const voisin of voisins) {
-        const voisinKey = pointKey(voisin)
-        
-        // Si le voisin est dans la liste fermée, continuer
-        if (listeFermee.some(p => p.x === voisin.x && p.y === voisin.y)) {
-          continue
-        }
-        
-        // Si le voisin est dans une zone morte, continuer
-        if (deadZone && this.isPointInDeadZone(voisin.x, voisin.y, deadZone)) {
-          continue
-        }
-        
-        const gScoreTentative = (gScore.get(pointKey(noeudCourant)) || 0) + this.distance(noeudCourant, voisin)
-        
-        const voisinDansListeOuverte = listeOuverte.some(p => p.x === voisin.x && p.y === voisin.y)
-        
-        if (!voisinDansListeOuverte) {
-          listeOuverte.push(voisin)
-        } else if (gScoreTentative >= (gScore.get(voisinKey) || Infinity)) {
-          continue
-        }
-        
-        // Ce chemin vers le voisin est le meilleur jusqu'à présent
-        parent.set(voisinKey, noeudCourant)
-        gScore.set(voisinKey, gScoreTentative)
-        fScore.set(voisinKey, gScoreTentative + this.heuristique(voisin, objectif))
-      }
-    }
-    
-    // Aucun chemin trouvé
-    return null
-  }
-
-  private reconstruireChemin(parent: Map<string, Point | null>, noeud: Point): Point[] {
-    const pointKey = (point: Point): string => `${point.x},${point.y}`
-    const chemin: Point[] = [noeud]
-    let noeudCourant = noeud
-    
-    while (parent.get(pointKey(noeudCourant)) !== null) {
-      const parentNoeud = parent.get(pointKey(noeudCourant))
-      if (parentNoeud) {
-        noeudCourant = parentNoeud
-        chemin.unshift(noeudCourant)
-      } else {
-        break
-      }
-    }
-    
-    return chemin
-  }
-
-  private heuristique(point1: Point, point2: Point): number {
-    // Distance de Manhattan (plus adaptée pour une grille)
-    return Math.abs(point1.x - point2.x) + Math.abs(point1.y - point2.y)
-  }
-
-  private distance(point1: Point, point2: Point): number {
-    // Distance euclidienne
-    return Math.sqrt(Math.pow(point2.x - point1.x, 2) + Math.pow(point2.y - point1.y, 2))
-  }
-
-  private getVoisins(point: Point, gridPoints: Point[], gridSizeWidth: number, gridSizeHeight: number): Point[] {
-    const voisins: Point[] = []
-    
-    // Les 8 directions possibles (incluant les diagonales)
-    const directions = [
-      { x: 0, y: -gridSizeHeight },   // Haut
-      { x: gridSizeWidth, y: 0 },     // Droite
-      { x: 0, y: gridSizeHeight },    // Bas
-      { x: -gridSizeWidth, y: 0 },    // Gauche
-      { x: gridSizeWidth, y: -gridSizeHeight },   // Haut-Droite
-      { x: gridSizeWidth, y: gridSizeHeight },    // Bas-Droite
-      { x: -gridSizeWidth, y: gridSizeHeight },   // Bas-Gauche
-      { x: -gridSizeWidth, y: -gridSizeHeight }   // Haut-Gauche
-    ]
-    
-    for (const direction of directions) {
-      const voisinX = point.x + direction.x
-      const voisinY = point.y + direction.y
-      
-      // Vérifier si le voisin existe dans les points de grille
-      const voisinExiste = gridPoints.some(p => p.x === voisinX && p.y === voisinY)
-      
-      if (voisinExiste) {
-        voisins.push({ x: voisinX, y: voisinY })
-      }
-    }
-    
-    return voisins
-  }
-
-  public drawPath(chemin: Point[], strokeStyle: string = 'green', lineWidth: number = 3): void {
-    if (chemin.length < 2) return
-    
-    for (let i = 0; i < chemin.length - 1; i++) {
-      this.drawLine(
-        chemin[i].x, 
-        chemin[i].y, 
-        chemin[i + 1].x, 
-        chemin[i + 1].y, 
-        strokeStyle, 
-        lineWidth
-      )
-    }
-    
-    // Marquer le point de départ et d'arrivée
-    this.drawCircle(chemin[0].x, chemin[0].y, 6, 'blue')
-    this.drawCircle(chemin[chemin.length - 1].x, chemin[chemin.length - 1].y, 6, 'red')
-  }
   
 }
