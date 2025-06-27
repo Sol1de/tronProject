@@ -15,6 +15,7 @@ export default class CanvasManager {
   private startPoint: Point | null = null
   private endPoint: Point | null = null
   private randomPaths: RandomPath[] = []
+  private showGrid: boolean = false
 
   public constructor(
     private canvas: HTMLCanvasElement,
@@ -195,27 +196,29 @@ export default class CanvasManager {
     }
   }
 
-  public drawGrid(gridPoints: Point[], gridSizeWidth: number, gridSizeHeight: number, deadZone?: DeadZone): void {
-    gridPoints.forEach(point => {
-      this.drawCircle(point.x, point.y, 3, 'yellow')
-    })
-    
-    for (let row = 0; row <= this.height / gridSizeHeight; row++) {
-      const y = row * gridSizeHeight
+  public drawGrid(gridPoints: Point[], gridSizeWidth: number, gridSizeHeight: number, deadZone?: DeadZone, showGrid: boolean = true): void {
+    if (showGrid) {
+      gridPoints.forEach(point => {
+        this.drawCircle(point.x, point.y, 3, 'yellow')
+      })
+      
+      for (let row = 0; row <= this.height / gridSizeHeight; row++) {
+        const y = row * gridSizeHeight
 
-      if (deadZone) {
-        this.drawGridLineWithDeadZone(0, y, this.width, y, deadZone, 'horizontal')
-      } else {
-        this.drawLine(0, y, this.width, y, 'white', 1)
+        if (deadZone) {
+          this.drawGridLineWithDeadZone(0, y, this.width, y, deadZone, 'horizontal')
+        } else {
+          this.drawLine(0, y, this.width, y, 'white', 1)
+        }
       }
-    }
-    
-    for (let col = 0; col <= this.width / gridSizeWidth; col++) {
-      const x = col * gridSizeWidth
-      if (deadZone) {
-        this.drawGridLineWithDeadZone(x, 0, x, this.height, deadZone, 'vertical')
-      } else {
-        this.drawLine(x, 0, x, this.height, 'white', 1)
+      
+      for (let col = 0; col <= this.width / gridSizeWidth; col++) {
+        const x = col * gridSizeWidth
+        if (deadZone) {
+          this.drawGridLineWithDeadZone(x, 0, x, this.height, deadZone, 'vertical')
+        } else {
+          this.drawLine(x, 0, x, this.height, 'white', 1)
+        }
       }
     }
     
@@ -973,6 +976,17 @@ export default class CanvasManager {
   }
 
   /**
+   * Bascule l'affichage de la grille
+   */
+  public toggleGrid(): void {
+    this.showGrid = !this.showGrid
+    this.redraw()
+    this.drawRandomPaths()
+    if (this.startPoint) this.drawCircle(this.startPoint.x, this.startPoint.y, 8, 'blue')
+    if (this.endPoint) this.drawCircle(this.endPoint.x, this.endPoint.y, 8, 'red')
+  }
+
+  /**
    * Dessine tous les chemins aléatoires générés avec informations de debug
    */
   public drawRandomPaths(strokeStyle: string = 'orange', lineWidth: number = 2): void {
@@ -1058,11 +1072,20 @@ Consultez la console pour plus de détails.`
       console.log('📊 Statistiques complètes:', stats)
       console.log('🔍 Chemins actuels:', this.randomPaths)
     })
+
+    document.getElementById('toggleGridBtn')?.addEventListener('click', () => {
+      this.showGrid = !this.showGrid
+      this.redraw(this.showGrid)
+      this.drawRandomPaths()
+      if (this.startPoint) this.drawCircle(this.startPoint.x, this.startPoint.y, 8, 'blue')
+      if (this.endPoint) this.drawCircle(this.endPoint.x, this.endPoint.y, 8, 'red')
+    })
   }
 
-  private redraw(): void {
+  private redraw(showGrid?: boolean): void {
     this.context.clearRect(0, 0, this.width, this.height)
-    this.drawGrid(this.gridPoints, this.gridSizeWidth, this.gridSizeHeight, this.deadZone)
+    const gridVisible = showGrid !== undefined ? showGrid : this.showGrid
+    this.drawGrid(this.gridPoints, this.gridSizeWidth, this.gridSizeHeight, this.deadZone, gridVisible)
   }
 
   /**
