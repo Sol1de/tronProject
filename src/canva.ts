@@ -1,5 +1,11 @@
 type Point = { x: number; y: number }
 type DeadZone = { basePoint: Point; deadZoneWidth: number; deadZoneHeight: number }
+type PathPoint = Point & { isUsed: boolean }
+type RandomPath = {
+  startPath: Point;
+  endPath: Point;
+  path?: Point[];
+}
 
 export default class CanvasManager {
   private gridPoints: Point[] = []
@@ -8,6 +14,7 @@ export default class CanvasManager {
   private deadZone?: DeadZone
   private startPoint: Point | null = null
   private endPoint: Point | null = null
+  private randomPaths: RandomPath[] = []
 
   public constructor(
     private canvas: HTMLCanvasElement,
@@ -346,7 +353,7 @@ export default class CanvasManager {
   private getNeighbors(point: Point): Point[] {
     const allValidPoints = [...this.gridPoints]
     if (this.deadZone) {
-      const deadZoneBorderPoints = this.getDeadZoneBorderPoints(this.deadZone)
+      const deadZoneBorderPoints = this.getDeadzoneBorderPoints()
       for (const borderPoint of deadZoneBorderPoints) {
         const exists = allValidPoints.some(p => p.x === borderPoint.x && p.y === borderPoint.y)
         if (!exists) {
@@ -413,7 +420,6 @@ export default class CanvasManager {
     this.canvas.addEventListener('click', this.handleCanvasClick.bind(this))
     this.setupButtons()
     this.redraw()
-    this.showDemo()
   }
 
   private handleCanvasClick(event: MouseEvent): void {
@@ -454,7 +460,7 @@ export default class CanvasManager {
     const availablePoints = [...this.gridPoints]
     
     if (this.deadZone) {
-      const deadZoneBorderPoints = this.getDeadZoneBorderPoints(this.deadZone)
+      const deadZoneBorderPoints = this.getDeadzoneBorderPoints()
       
       for (const borderPoint of deadZoneBorderPoints) {
         const exists = this.gridPoints.some(p => p.x === borderPoint.x && p.y === borderPoint.y)
@@ -473,53 +479,48 @@ export default class CanvasManager {
     }, null)
   }
 
-  private getDeadZoneBorderPoints(deadZone: DeadZone): Point[] {
-    const points: Point[] = []
-    const halfWidth = deadZone.deadZoneWidth / 2
-    const halfHeight = deadZone.deadZoneHeight / 2
+  /**
+   * Retourne tous les points composant la bordure de la deadzone
+   */
+  public getDeadzoneBorderPoints(): PathPoint[] {
+    if (!this.deadZone) return []
+    
+    const points: PathPoint[] = []
+    const halfWidth = this.deadZone.deadZoneWidth / 2
+    const halfHeight = this.deadZone.deadZoneHeight / 2
     const bounds = {
-      left: deadZone.basePoint.x - halfWidth,
-      right: deadZone.basePoint.x + halfWidth,
-      top: deadZone.basePoint.y - halfHeight,
-      bottom: deadZone.basePoint.y + halfHeight
+      left: this.deadZone.basePoint.x - halfWidth,
+      right: this.deadZone.basePoint.x + halfWidth,
+      top: this.deadZone.basePoint.y - halfHeight,
+      bottom: this.deadZone.basePoint.y + halfHeight
     }
 
+    // Points sur les bordures horizontales (haut et bas)
     for (let x = Math.ceil(bounds.left / this.gridSizeWidth) * this.gridSizeWidth; x <= bounds.right; x += this.gridSizeWidth) {
       if (x >= bounds.left && x <= bounds.right && x >= 0 && x <= this.width) {
         if (bounds.top >= 0 && bounds.top <= this.height) {
-          points.push({ x, y: bounds.top })
+          points.push({ x, y: bounds.top, isUsed: false })
         }
         if (bounds.bottom >= 0 && bounds.bottom <= this.height) {
-          points.push({ x, y: bounds.bottom })
+          points.push({ x, y: bounds.bottom, isUsed: false })
         }
       }
     }
 
+    // Points sur les bordures verticales (gauche et droite)
     for (let y = Math.ceil(bounds.top / this.gridSizeHeight) * this.gridSizeHeight; y <= bounds.bottom; y += this.gridSizeHeight) {
       if (y >= bounds.top && y <= bounds.bottom && y >= 0 && y <= this.height) {
         if (bounds.left >= 0 && bounds.left <= this.width) {
-          points.push({ x: bounds.left, y })
+          points.push({ x: bounds.left, y, isUsed: false })
         }
         if (bounds.right >= 0 && bounds.right <= this.width) {
-          points.push({ x: bounds.right, y })
+          points.push({ x: bounds.right, y, isUsed: false })
         }
       }
     }
 
-    const corners = [
-      { x: bounds.left, y: bounds.top },
-      { x: bounds.right, y: bounds.top },
-      { x: bounds.left, y: bounds.bottom },
-      { x: bounds.right, y: bounds.bottom }
-    ]
-    
-    corners.forEach(corner => {
-      if (corner.x >= 0 && corner.x <= this.width && corner.y >= 0 && corner.y <= this.height) {
-        points.push(corner)
-      }
-    })
-
-    const uniquePoints = new Map<string, Point>()
+    // Suppression des doublons
+    const uniquePoints = new Map<string, PathPoint>()
     points.forEach(point => {
       const key = `${point.x},${point.y}`
       if (!uniquePoints.has(key)) {
@@ -528,6 +529,310 @@ export default class CanvasManager {
     })
 
     return Array.from(uniquePoints.values())
+  }
+
+  /**
+   * Retourne tous les points composant la bordure du canevas
+   */
+  public getCanvasBorderPoints(): PathPoint[] {
+    const points: PathPoint[] = []
+    
+    // Points sur la bordure gauche (x = 0)
+    for (let y = 0; y <= this.height; y += this.gridSizeHeight) {
+      if (!this.deadZone || !this.isPointInDeadZone(0, y, this.deadZone)) {
+        points.push({ x: 0, y, isUsed: false })
+      }
+    }
+    
+    // Points sur la bordure droite (x = width)
+    for (let y = 0; y <= this.height; y += this.gridSizeHeight) {
+      if (!this.deadZone || !this.isPointInDeadZone(this.width, y, this.deadZone)) {
+        points.push({ x: this.width, y, isUsed: false })
+      }
+    }
+    
+    // Points sur la bordure haut (y = 0)
+    for (let x = 0; x <= this.width; x += this.gridSizeWidth) {
+      if (!this.deadZone || !this.isPointInDeadZone(x, 0, this.deadZone)) {
+        points.push({ x, y: 0, isUsed: false })
+      }
+    }
+    
+    // Points sur la bordure bas (y = height)
+    for (let x = 0; x <= this.width; x += this.gridSizeWidth) {
+      if (!this.deadZone || !this.isPointInDeadZone(x, this.height, this.deadZone)) {
+        points.push({ x, y: this.height, isUsed: false })
+      }
+    }
+    
+    // Suppression des doublons
+    const uniquePoints = new Map<string, PathPoint>()
+    points.forEach(point => {
+      const key = `${point.x},${point.y}`
+      if (!uniquePoints.has(key)) {
+        uniquePoints.set(key, point)
+      }
+    })
+
+    return Array.from(uniquePoints.values())
+  }
+
+  /**
+   * Vérifie si deux points sont identiques
+   */
+  private arePointsEqual(p1: Point, p2: Point): boolean {
+    return p1.x === p2.x && p1.y === p2.y
+  }
+
+  /**
+   * Calcule la distance entre deux points
+   */
+  private getPointDistance(p1: Point, p2: Point): number {
+    return Math.sqrt((p2.x - p1.x) ** 2 + (p2.y - p1.y) ** 2)
+  }
+
+  /**
+   * Vérifie si un point est sur un segment de ligne
+   */
+  private isPointOnSegment(point: Point, segStart: Point, segEnd: Point): boolean {
+    // Vérifier si le point est colinéaire avec le segment
+    const crossProduct = (point.y - segStart.y) * (segEnd.x - segStart.x) - (point.x - segStart.x) * (segEnd.y - segStart.y)
+    
+    // Si pas colinéaire (avec une petite tolérance pour les erreurs de calcul)
+    if (Math.abs(crossProduct) > 1e-6) return false
+    
+    // Vérifier si le point est dans la bounding box du segment
+    const dotProduct = (point.x - segStart.x) * (segEnd.x - segStart.x) + (point.y - segStart.y) * (segEnd.y - segStart.y)
+    const segmentLengthSquared = (segEnd.x - segStart.x) ** 2 + (segEnd.y - segStart.y) ** 2
+    
+    return dotProduct >= 0 && dotProduct <= segmentLengthSquared
+  }
+
+  /**
+   * Vérifie si deux segments de ligne se croisent ou se touchent
+   */
+  private doLinesIntersectOrTouch(line1Start: Point, line1End: Point, line2Start: Point, line2End: Point): boolean {
+    // Vérifier si les extrémités des segments se touchent
+    if (this.arePointsEqual(line1Start, line2Start) || this.arePointsEqual(line1Start, line2End) ||
+        this.arePointsEqual(line1End, line2Start) || this.arePointsEqual(line1End, line2End)) {
+      return true
+    }
+    
+    // Vérifier si une extrémité d'un segment est sur l'autre segment
+    if (this.isPointOnSegment(line1Start, line2Start, line2End) || 
+        this.isPointOnSegment(line1End, line2Start, line2End) ||
+        this.isPointOnSegment(line2Start, line1Start, line1End) || 
+        this.isPointOnSegment(line2End, line1Start, line1End)) {
+      return true
+    }
+    
+    // Algorithme CCW pour détecter les croisements stricts
+    const ccw = (A: Point, B: Point, C: Point): boolean => {
+      return (C.y - A.y) * (B.x - A.x) > (B.y - A.y) * (C.x - A.x)
+    }
+    
+    const A = line1Start
+    const B = line1End
+    const C = line2Start
+    const D = line2End
+    
+    return ccw(A, C, D) !== ccw(B, C, D) && ccw(A, B, C) !== ccw(A, B, D)
+  }
+
+  /**
+   * Vérifie si un chemin croise, touche ou partage des points avec les chemins existants
+   */
+  private doesPathIntersectWithExisting(newPath: Point[], existingPaths: RandomPath[]): boolean {
+    if (newPath.length < 2) return false
+    
+    for (const existingPath of existingPaths) {
+      if (!existingPath.path || existingPath.path.length < 2) continue
+      
+      // 1. Vérifier si les chemins partagent des points communs (sauf les points de départ/arrivée sur les bordures)
+      for (let i = 1; i < newPath.length - 1; i++) { // Ignorer les points de départ et d'arrivée
+        const newPoint = newPath[i]
+        
+        for (let j = 1; j < existingPath.path.length - 1; j++) { // Ignorer les points de départ et d'arrivée
+          const existingPoint = existingPath.path[j]
+          
+          if (this.arePointsEqual(newPoint, existingPoint)) {
+            console.log(`🔍 Conflit détecté: point partagé à (${newPoint.x}, ${newPoint.y})`)
+            return true
+          }
+        }
+      }
+      
+      // 2. Vérifier chaque segment du nouveau chemin contre chaque segment des chemins existants
+      for (let i = 0; i < newPath.length - 1; i++) {
+        const newSegmentStart = newPath[i]
+        const newSegmentEnd = newPath[i + 1]
+        
+        for (let j = 0; j < existingPath.path.length - 1; j++) {
+          const existingSegmentStart = existingPath.path[j]
+          const existingSegmentEnd = existingPath.path[j + 1]
+          
+          if (this.doLinesIntersectOrTouch(newSegmentStart, newSegmentEnd, existingSegmentStart, existingSegmentEnd)) {
+            console.log(`🔍 Conflit détecté: segments se touchent/croisent`)
+            console.log(`  Nouveau: (${newSegmentStart.x},${newSegmentStart.y}) -> (${newSegmentEnd.x},${newSegmentEnd.y})`)
+            console.log(`  Existant: (${existingSegmentStart.x},${existingSegmentStart.y}) -> (${existingSegmentEnd.x},${existingSegmentEnd.y})`)
+            return true
+          }
+        }
+      }
+      
+      // 3. Vérifier si les chemins passent trop près l'un de l'autre (optionnel, distance minimale)
+      const minDistance = Math.min(this.gridSizeWidth, this.gridSizeHeight) * 0.8 // 80% de la taille de grille
+      
+      for (let i = 0; i < newPath.length; i++) {
+        const newPoint = newPath[i]
+        
+        for (let j = 0; j < existingPath.path.length; j++) {
+          const existingPoint = existingPath.path[j]
+          
+          // Ne pas vérifier la distance pour les points de bordure (départ/arrivée)
+          const isNewPointBorder = (i === 0 || i === newPath.length - 1)
+          const isExistingPointBorder = (j === 0 || j === existingPath.path.length - 1)
+          
+          if (!isNewPointBorder && !isExistingPointBorder) {
+            const distance = this.getPointDistance(newPoint, existingPoint)
+            if (distance < minDistance && distance > 0) {
+              console.log(`🔍 Conflit détecté: chemins trop proches (${distance.toFixed(1)} < ${minDistance.toFixed(1)})`)
+              console.log(`  Point 1: (${newPoint.x},${newPoint.y})`)
+              console.log(`  Point 2: (${existingPoint.x},${existingPoint.y})`)
+              return true
+            }
+          }
+        }
+      }
+    }
+    
+    return false
+  }
+
+  /**
+   * Génère des chemins aléatoires entre la bordure de la deadzone et la bordure du canevas
+   * Évite les croisements en essayant différents points de destination
+   */
+  public setRandomPaths(numberOfPaths: number = 5): RandomPath[] {
+    const deadzoneBorderPoints = this.getDeadzoneBorderPoints()
+    const canvasBorderPoints = this.getCanvasBorderPoints()
+    const paths: RandomPath[] = []
+    
+    // Copie des tableaux pour pouvoir les modifier
+    const availableDeadzonePoints = [...deadzoneBorderPoints]
+    const availableCanvasPoints = [...canvasBorderPoints]
+    
+    for (let i = 0; i < numberOfPaths && availableDeadzonePoints.length > 0 && availableCanvasPoints.length > 0; i++) {
+      // Sélection aléatoire d'un point de la deadzone
+      const randomDeadzoneIndex = Math.floor(Math.random() * availableDeadzonePoints.length)
+      const startPoint = availableDeadzonePoints[randomDeadzoneIndex]
+      
+      let pathFound = false
+      let attempts = 0
+      const maxAttempts = availableCanvasPoints.length
+      const triedCanvasPoints = new Set<number>()
+      
+      while (!pathFound && attempts < maxAttempts && triedCanvasPoints.size < availableCanvasPoints.length) {
+        // Sélection aléatoire d'un point du canvas non encore essayé
+        let randomCanvasIndex: number
+        do {
+          randomCanvasIndex = Math.floor(Math.random() * availableCanvasPoints.length)
+        } while (triedCanvasPoints.has(randomCanvasIndex))
+        
+        triedCanvasPoints.add(randomCanvasIndex)
+        const endPoint = availableCanvasPoints[randomCanvasIndex]
+        
+        // Calcul du chemin avec A*
+        const path = this.aStar(startPoint, endPoint)
+        
+        if (path) {
+          // Vérifier si ce chemin croise avec les chemins existants
+          if (!this.doesPathIntersectWithExisting(path, paths)) {
+            // Chemin valide trouvé !
+            paths.push({
+              startPath: { x: startPoint.x, y: startPoint.y },
+              endPath: { x: endPoint.x, y: endPoint.y },
+              path: path
+            })
+            
+            // Marquer les points comme utilisés et les retirer des listes disponibles
+            startPoint.isUsed = true
+            endPoint.isUsed = true
+            availableDeadzonePoints.splice(randomDeadzoneIndex, 1)
+            availableCanvasPoints.splice(randomCanvasIndex, 1)
+            
+            pathFound = true
+                         console.log(`✅ Chemin ${i + 1} créé sans conflit`)
+           } else {
+             console.log(`❌ Chemin ${i + 1} entre en conflit avec un chemin existant, tentative ${attempts + 1}`)
+          }
+        } else {
+          console.log(`⚠️ Aucun chemin A* trouvé pour la tentative ${attempts + 1}`)
+        }
+        
+        attempts++
+      }
+      
+      if (!pathFound) {
+        console.log(`🚫 Impossible de créer le chemin ${i + 1} sans conflit après ${attempts} tentatives`)
+        // Retirer quand même le point de départ pour éviter de le réessayer
+        availableDeadzonePoints.splice(randomDeadzoneIndex, 1)
+        i-- // Réessayer ce chemin avec un autre point de départ
+      }
+    }
+    
+    this.randomPaths = paths
+    console.log(`🎯 Génération terminée: ${paths.length}/${numberOfPaths} chemins créés sans conflit`)
+    return paths
+  }
+
+  /**
+   * Efface tous les chemins aléatoires
+   */
+  public clearRandomPaths(): void {
+    this.randomPaths = []
+  }
+
+  /**
+   * Retourne les statistiques sur la génération de chemins aléatoires
+   */
+  public getRandomPathsStats(): {
+    totalPaths: number;
+    deadzonePointsAvailable: number;
+    canvasPointsAvailable: number;
+    deadzonePointsUsed: number;
+    canvasPointsUsed: number;
+  } {
+    const deadzonePoints = this.getDeadzoneBorderPoints()
+    const canvasPoints = this.getCanvasBorderPoints()
+    
+    return {
+      totalPaths: this.randomPaths.length,
+      deadzonePointsAvailable: deadzonePoints.filter(p => !p.isUsed).length,
+      canvasPointsAvailable: canvasPoints.filter(p => !p.isUsed).length,
+      deadzonePointsUsed: deadzonePoints.filter(p => p.isUsed).length,
+      canvasPointsUsed: canvasPoints.filter(p => p.isUsed).length
+    }
+  }
+
+  /**
+   * Dessine tous les chemins aléatoires générés avec informations de debug
+   */
+  public drawRandomPaths(strokeStyle: string = 'orange', lineWidth: number = 2): void {
+    this.randomPaths.forEach((randomPath, index) => {
+      if (randomPath.path) {
+        // Utiliser une couleur différente pour chaque chemin
+        const colors = ['orange', 'cyan', 'magenta', 'lime', 'yellow', 'pink', 'lightblue', 'lightgreen']
+        const color = colors[index % colors.length]
+        this.drawPath(randomPath.path, color, lineWidth)
+        
+        // Ajouter des numéros aux chemins pour le debug
+        const midPoint = randomPath.path[Math.floor(randomPath.path.length / 2)]
+        this.context.fillStyle = 'white'
+        this.context.font = '12px Arial'
+        this.context.fillText(`${index + 1}`, midPoint.x + 10, midPoint.y - 10)
+      }
+    })
   }
 
   private setupButtons(): void {
@@ -563,6 +868,39 @@ export default class CanvasManager {
       if (this.startPoint) this.drawCircle(this.startPoint.x, this.startPoint.y, 8, 'blue')
       if (this.endPoint) this.drawCircle(this.endPoint.x, this.endPoint.y, 8, 'red')
     })
+
+    document.getElementById('generateRandomPathsBtn')?.addEventListener('click', () => {
+      this.clearRandomPaths()
+      this.setRandomPaths(5)
+      this.redraw()
+      this.drawRandomPaths()
+      if (this.startPoint) this.drawCircle(this.startPoint.x, this.startPoint.y, 8, 'blue')
+      if (this.endPoint) this.drawCircle(this.endPoint.x, this.endPoint.y, 8, 'red')
+    })
+
+    document.getElementById('clearRandomPathsBtn')?.addEventListener('click', () => {
+      this.clearRandomPaths()
+      this.redraw()
+      if (this.startPoint) this.drawCircle(this.startPoint.x, this.startPoint.y, 8, 'blue')
+      if (this.endPoint) this.drawCircle(this.endPoint.x, this.endPoint.y, 8, 'red')
+    })
+
+    document.getElementById('showStatsBtn')?.addEventListener('click', () => {
+      const stats = this.getRandomPathsStats()
+      const message = `📊 Statistiques des chemins aléatoires:
+      
+• Chemins créés: ${stats.totalPaths}
+• Points deadzone disponibles: ${stats.deadzonePointsAvailable}
+• Points deadzone utilisés: ${stats.deadzonePointsUsed}
+• Points canvas disponibles: ${stats.canvasPointsAvailable}
+• Points canvas utilisés: ${stats.canvasPointsUsed}
+
+Consultez la console pour plus de détails.`
+      
+      alert(message)
+      console.log('📊 Statistiques complètes:', stats)
+      console.log('🔍 Chemins actuels:', this.randomPaths)
+    })
   }
 
   private redraw(): void {
@@ -570,16 +908,7 @@ export default class CanvasManager {
     this.drawGrid(this.gridPoints, this.gridSizeWidth, this.gridSizeHeight, this.deadZone)
   }
 
-  private showDemo(): void {
-    setTimeout(() => {
-      const demo = this.aStar({ x: 0, y: 0 }, { x: 500, y: 500 })
-      if (demo) {
-        this.drawPath(demo, 'purple', 2)
-        this.drawCircle(0, 0, 6, 'purple')
-        this.drawCircle(500, 500, 6, 'purple')
-      }
-    }, 500)
-  }
+
 
   // Getters and setters
   public getCanvas(): HTMLCanvasElement {
