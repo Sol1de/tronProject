@@ -304,5 +304,159 @@ export default class CanvasManager {
   public setHeight(height: number): void {
     this.height = height
   }  
+
+  // A* Pathfinding Algorithm Implementation
+  public aStar(debut: Point, objectif: Point, gridPoints: Point[], gridSizeWidth: number, gridSizeHeight: number, deadZone?: DeadZone): Point[] | null {
+    // Initialisation
+    const listeOuverte: Point[] = [debut]
+    const listeFermee: Point[] = []
+    
+    const gScore = new Map<string, number>()
+    const fScore = new Map<string, number>()
+    const parent = new Map<string, Point | null>()
+    
+    const pointKey = (point: Point): string => `${point.x},${point.y}`
+    
+    gScore.set(pointKey(debut), 0)
+    fScore.set(pointKey(debut), this.heuristique(debut, objectif))
+    parent.set(pointKey(debut), null)
+    
+    while (listeOuverte.length > 0) {
+      // Sélectionner le nœud avec le plus petit f_score
+      let noeudCourant = listeOuverte[0]
+      let indexCourant = 0
+      
+      for (let i = 1; i < listeOuverte.length; i++) {
+        const currentFScore = fScore.get(pointKey(listeOuverte[i])) || Infinity
+        const bestFScore = fScore.get(pointKey(noeudCourant)) || Infinity
+        
+        if (currentFScore < bestFScore) {
+          noeudCourant = listeOuverte[i]
+          indexCourant = i
+        }
+      }
+      
+      // Si on a atteint l'objectif
+      if (noeudCourant.x === objectif.x && noeudCourant.y === objectif.y) {
+        return this.reconstruireChemin(parent, objectif)
+      }
+      
+      // Déplacer le nœud courant vers la liste fermée
+      listeOuverte.splice(indexCourant, 1)
+      listeFermee.push(noeudCourant)
+      
+      // Examiner tous les voisins
+      const voisins = this.getVoisins(noeudCourant, gridPoints, gridSizeWidth, gridSizeHeight)
+      
+      for (const voisin of voisins) {
+        const voisinKey = pointKey(voisin)
+        
+        // Si le voisin est dans la liste fermée, continuer
+        if (listeFermee.some(p => p.x === voisin.x && p.y === voisin.y)) {
+          continue
+        }
+        
+        // Si le voisin est dans une zone morte, continuer
+        if (deadZone && this.isPointInDeadZone(voisin.x, voisin.y, deadZone)) {
+          continue
+        }
+        
+        const gScoreTentative = (gScore.get(pointKey(noeudCourant)) || 0) + this.distance(noeudCourant, voisin)
+        
+        const voisinDansListeOuverte = listeOuverte.some(p => p.x === voisin.x && p.y === voisin.y)
+        
+        if (!voisinDansListeOuverte) {
+          listeOuverte.push(voisin)
+        } else if (gScoreTentative >= (gScore.get(voisinKey) || Infinity)) {
+          continue
+        }
+        
+        // Ce chemin vers le voisin est le meilleur jusqu'à présent
+        parent.set(voisinKey, noeudCourant)
+        gScore.set(voisinKey, gScoreTentative)
+        fScore.set(voisinKey, gScoreTentative + this.heuristique(voisin, objectif))
+      }
+    }
+    
+    // Aucun chemin trouvé
+    return null
+  }
+
+  private reconstruireChemin(parent: Map<string, Point | null>, noeud: Point): Point[] {
+    const pointKey = (point: Point): string => `${point.x},${point.y}`
+    const chemin: Point[] = [noeud]
+    let noeudCourant = noeud
+    
+    while (parent.get(pointKey(noeudCourant)) !== null) {
+      const parentNoeud = parent.get(pointKey(noeudCourant))
+      if (parentNoeud) {
+        noeudCourant = parentNoeud
+        chemin.unshift(noeudCourant)
+      } else {
+        break
+      }
+    }
+    
+    return chemin
+  }
+
+  private heuristique(point1: Point, point2: Point): number {
+    // Distance de Manhattan (plus adaptée pour une grille)
+    return Math.abs(point1.x - point2.x) + Math.abs(point1.y - point2.y)
+  }
+
+  private distance(point1: Point, point2: Point): number {
+    // Distance euclidienne
+    return Math.sqrt(Math.pow(point2.x - point1.x, 2) + Math.pow(point2.y - point1.y, 2))
+  }
+
+  private getVoisins(point: Point, gridPoints: Point[], gridSizeWidth: number, gridSizeHeight: number): Point[] {
+    const voisins: Point[] = []
+    
+    // Les 8 directions possibles (incluant les diagonales)
+    const directions = [
+      { x: 0, y: -gridSizeHeight },   // Haut
+      { x: gridSizeWidth, y: 0 },     // Droite
+      { x: 0, y: gridSizeHeight },    // Bas
+      { x: -gridSizeWidth, y: 0 },    // Gauche
+      { x: gridSizeWidth, y: -gridSizeHeight },   // Haut-Droite
+      { x: gridSizeWidth, y: gridSizeHeight },    // Bas-Droite
+      { x: -gridSizeWidth, y: gridSizeHeight },   // Bas-Gauche
+      { x: -gridSizeWidth, y: -gridSizeHeight }   // Haut-Gauche
+    ]
+    
+    for (const direction of directions) {
+      const voisinX = point.x + direction.x
+      const voisinY = point.y + direction.y
+      
+      // Vérifier si le voisin existe dans les points de grille
+      const voisinExiste = gridPoints.some(p => p.x === voisinX && p.y === voisinY)
+      
+      if (voisinExiste) {
+        voisins.push({ x: voisinX, y: voisinY })
+      }
+    }
+    
+    return voisins
+  }
+
+  public drawPath(chemin: Point[], strokeStyle: string = 'green', lineWidth: number = 3): void {
+    if (chemin.length < 2) return
+    
+    for (let i = 0; i < chemin.length - 1; i++) {
+      this.drawLine(
+        chemin[i].x, 
+        chemin[i].y, 
+        chemin[i + 1].x, 
+        chemin[i + 1].y, 
+        strokeStyle, 
+        lineWidth
+      )
+    }
+    
+    // Marquer le point de départ et d'arrivée
+    this.drawCircle(chemin[0].x, chemin[0].y, 6, 'blue')
+    this.drawCircle(chemin[chemin.length - 1].x, chemin[chemin.length - 1].y, 6, 'red')
+  }
   
 }
