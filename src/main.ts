@@ -118,12 +118,6 @@ document.getElementById('clearPathBtn')?.addEventListener('click', () => {
 // Dessiner la grille initiale
 redrawCanvas()
 
-// Démonstration automatique au démarrage
-console.log('=== DÉMONSTRATION A* ===')
-console.log('Grille:', gridSizeWidth, 'x', gridSizeHeight)
-console.log('Points de grille disponibles:', gridPoints.length)
-console.log('Zone morte:', deadZone)
-
 // Exemple automatique
 setTimeout(() => {
   const exampleStart = { x: 0, y: 0 }
