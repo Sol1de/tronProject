@@ -709,10 +709,11 @@ export default class CanvasManager {
     return false
   }
 
-  /**
+    /**
    * Génère des chemins aléatoires entre la bordure de la deadzone et la bordure du canevas
    * Évite les croisements en essayant différents points de destination
-x²   * Génère automatiquement le nombre maximum possible de chemins
+   * Génère automatiquement le nombre maximum possible de chemins
+   * Quand les points de bordure deadzone sont épuisés, utilise les points les plus proches de la deadzone
    */
   public setRandomPaths(numberOfPaths?: number): RandomPath[] {
     const deadzoneBorderPoints = this.getDeadzoneBorderPoints()
@@ -723,16 +724,48 @@ x²   * Génère automatiquement le nombre maximum possible de chemins
     const availableDeadzonePoints = [...deadzoneBorderPoints]
     const availableCanvasPoints = [...canvasBorderPoints]
     
-    // Calculer le nombre maximum possible de chemins
-    const maxPossiblePaths = Math.min(availableDeadzonePoints.length, availableCanvasPoints.length)
-    const targetPaths = numberOfPaths !== undefined ? Math.min(numberOfPaths, maxPossiblePaths) : maxPossiblePaths
+    // Obtenir tous les points triés par proximité à la deadzone pour utilisation ultérieure
+    const proximityPoints = this.getPointsByProximityToDeadzone()
+    let availableProximityPoints = [...proximityPoints]
     
-    console.log(`🎯 Tentative de génération de ${targetPaths} chemins (max théorique: ${maxPossiblePaths})`)
+    // Calculer le nombre maximum possible de chemins (maintenant illimité grâce aux proximity points)
+    const maxPossiblePathsWithBorder = Math.min(availableDeadzonePoints.length, availableCanvasPoints.length)
+    const maxPossiblePathsTotal = availableCanvasPoints.length // Limité par les points de bordure canvas
+    const targetPaths = numberOfPaths !== undefined ? Math.min(numberOfPaths, maxPossiblePathsTotal) : maxPossiblePathsTotal
     
-    for (let i = 0; i < targetPaths && availableDeadzonePoints.length > 0 && availableCanvasPoints.length > 0; i++) {
-      // Sélection aléatoire d'un point de la deadzone
-      const randomDeadzoneIndex = Math.floor(Math.random() * availableDeadzonePoints.length)
-      const startPoint = availableDeadzonePoints[randomDeadzoneIndex]
+    console.log(`🎯 Tentative de génération de ${targetPaths} chemins`)
+    console.log(`📍 Points deadzone border: ${availableDeadzonePoints.length}`)
+    console.log(`📍 Points canvas border: ${availableCanvasPoints.length}`)
+    console.log(`📍 Points proximité deadzone: ${availableProximityPoints.length}`)
+    
+    let pathIndex = 0
+    
+    while (pathIndex < targetPaths && availableCanvasPoints.length > 0) {
+      let startPoint: PathPoint
+      let isUsingBorderPoint = false
+      
+      // Phase 1: Utiliser les points de bordure deadzone en priorité
+      if (availableDeadzonePoints.length > 0) {
+        const randomDeadzoneIndex = Math.floor(Math.random() * availableDeadzonePoints.length)
+        startPoint = availableDeadzonePoints[randomDeadzoneIndex]
+        isUsingBorderPoint = true
+        console.log(`🎯 Chemin ${pathIndex + 1}: Utilisation d'un point de bordure deadzone`)
+      } 
+      // Phase 2: Utiliser les points les plus proches de la deadzone
+      else if (availableProximityPoints.length > 0) {
+        // Prendre un des 10 points les plus proches (ou moins s'il y en a moins)
+        const topClosestCount = Math.min(10, availableProximityPoints.length)
+        const randomProximityIndex = Math.floor(Math.random() * topClosestCount)
+        const selectedPoint = availableProximityPoints[randomProximityIndex]
+        startPoint = selectedPoint
+        isUsingBorderPoint = false
+        console.log(`🎯 Chemin ${pathIndex + 1}: Utilisation d'un point proche de la deadzone (distance: ${this.getDistanceToDeadzone(selectedPoint).toFixed(1)})`)
+      } 
+      // Phase 3: Plus de points disponibles
+      else {
+        console.log(`🚫 Plus de points de départ disponibles`)
+        break
+      }
       
       let pathFound = false
       let attempts = 0
@@ -765,13 +798,25 @@ x²   * Génère automatiquement le nombre maximum possible de chemins
             // Marquer les points comme utilisés et les retirer des listes disponibles
             startPoint.isUsed = true
             endPoint.isUsed = true
-            availableDeadzonePoints.splice(randomDeadzoneIndex, 1)
             availableCanvasPoints.splice(randomCanvasIndex, 1)
             
+            // Retirer le point de départ de la bonne liste
+            if (isUsingBorderPoint) {
+              const indexToRemove = availableDeadzonePoints.findIndex(p => p.x === startPoint.x && p.y === startPoint.y)
+              if (indexToRemove !== -1) {
+                availableDeadzonePoints.splice(indexToRemove, 1)
+              }
+            } else {
+              const indexToRemove = availableProximityPoints.findIndex(p => p.x === startPoint.x && p.y === startPoint.y)
+              if (indexToRemove !== -1) {
+                availableProximityPoints.splice(indexToRemove, 1)
+              }
+            }
+            
             pathFound = true
-                         console.log(`✅ Chemin ${i + 1} créé sans conflit`)
-           } else {
-             console.log(`❌ Chemin ${i + 1} entre en conflit avec un chemin existant, tentative ${attempts + 1}`)
+            console.log(`✅ Chemin ${pathIndex + 1} créé sans conflit`)
+          } else {
+            console.log(`❌ Chemin ${pathIndex + 1} entre en conflit avec un chemin existant, tentative ${attempts + 1}`)
           }
         } else {
           console.log(`⚠️ Aucun chemin A* trouvé pour la tentative ${attempts + 1}`)
@@ -781,15 +826,26 @@ x²   * Génère automatiquement le nombre maximum possible de chemins
       }
       
       if (!pathFound) {
-        console.log(`🚫 Impossible de créer le chemin ${i + 1} sans conflit après ${attempts} tentatives`)
-        // Retirer quand même le point de départ pour éviter de le réessayer
-        availableDeadzonePoints.splice(randomDeadzoneIndex, 1)
-        i-- // Réessayer ce chemin avec un autre point de départ
+        console.log(`🚫 Impossible de créer le chemin ${pathIndex + 1} sans conflit après ${attempts} tentatives`)
+        // Retirer le point de départ pour éviter de le réessayer
+        if (isUsingBorderPoint) {
+          const indexToRemove = availableDeadzonePoints.findIndex(p => p.x === startPoint.x && p.y === startPoint.y)
+          if (indexToRemove !== -1) {
+            availableDeadzonePoints.splice(indexToRemove, 1)
+          }
+        } else {
+          const indexToRemove = availableProximityPoints.findIndex(p => p.x === startPoint.x && p.y === startPoint.y)
+          if (indexToRemove !== -1) {
+            availableProximityPoints.splice(indexToRemove, 1)
+          }
+        }
+      } else {
+        pathIndex++
       }
     }
     
     this.randomPaths = paths
-    console.log(`🎯 Génération terminée: ${paths.length}/${targetPaths} chemins créés sans conflit (max théorique: ${maxPossiblePaths})`)
+    console.log(`🎯 Génération terminée: ${paths.length}/${targetPaths} chemins créés sans conflit`)
     return paths
   }
 
@@ -915,7 +971,64 @@ Consultez la console pour plus de détails.`
     this.drawGrid(this.gridPoints, this.gridSizeWidth, this.gridSizeHeight, this.deadZone)
   }
 
+  /**
+   * Calcule la distance minimale d'un point à la deadzone
+   */
+  private getDistanceToDeadzone(point: Point): number {
+    if (!this.deadZone) return Infinity
+    
+    const halfWidth = this.deadZone.deadZoneWidth / 2
+    const halfHeight = this.deadZone.deadZoneHeight / 2
+    const bounds = {
+      left: this.deadZone.basePoint.x - halfWidth,
+      right: this.deadZone.basePoint.x + halfWidth,
+      top: this.deadZone.basePoint.y - halfHeight,
+      bottom: this.deadZone.basePoint.y + halfHeight
+    }
+    
+    // Si le point est dans la deadzone, retourner une distance très grande
+    if (this.isPointInDeadZone(point.x, point.y, this.deadZone)) {
+      return Infinity
+    }
+    
+    // Calculer la distance au rectangle de la deadzone
+    let dx = 0
+    let dy = 0
+    
+    if (point.x < bounds.left) {
+      dx = bounds.left - point.x
+    } else if (point.x > bounds.right) {
+      dx = point.x - bounds.right
+    }
+    
+    if (point.y < bounds.top) {
+      dy = bounds.top - point.y
+    } else if (point.y > bounds.bottom) {
+      dy = point.y - bounds.bottom
+    }
+    
+    return Math.sqrt(dx * dx + dy * dy)
+  }
 
+  /**
+   * Retourne les points de grille triés par proximité à la deadzone (excluant les points dans la deadzone)
+   */
+  private getPointsByProximityToDeadzone(): PathPoint[] {
+    if (!this.deadZone) return []
+    
+    const availablePoints: PathPoint[] = this.gridPoints
+      .filter(point => !this.isPointInDeadZone(point.x, point.y, this.deadZone!))
+      .map(point => ({ ...point, isUsed: false }))
+    
+    // Trier par distance à la deadzone (du plus proche au plus éloigné)
+    availablePoints.sort((a, b) => {
+      const distA = this.getDistanceToDeadzone(a)
+      const distB = this.getDistanceToDeadzone(b)
+      return distA - distB
+    })
+    
+    return availablePoints
+  }
 
   // Getters and setters
   public getCanvas(): HTMLCanvasElement {
