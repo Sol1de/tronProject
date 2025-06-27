@@ -292,7 +292,6 @@ export default class CanvasManager {
     fScore.set(key(debut), h(debut, objectif))
     
     while (openSet.length > 0) {
-      // Find node with lowest f_score
       const current = openSet.reduce((best, node) => 
         (fScore.get(key(node)) || Infinity) < (fScore.get(key(best)) || Infinity) ? node : best
       )
@@ -345,7 +344,6 @@ export default class CanvasManager {
   }
 
   private getNeighbors(point: Point): Point[] {
-    // Créer une liste combinée incluant les points de bordure de deadZone
     const allValidPoints = [...this.gridPoints]
     if (this.deadZone) {
       const deadZoneBorderPoints = this.getDeadZoneBorderPoints(this.deadZone)
@@ -357,7 +355,6 @@ export default class CanvasManager {
       }
     }
     
-    // Essayer d'abord la méthode classique (directions fixes)
     const directions = [
       [0, -this.gridSizeHeight], [this.gridSizeWidth, 0], [0, this.gridSizeHeight], [-this.gridSizeWidth, 0],
       [this.gridSizeWidth, -this.gridSizeHeight], [this.gridSizeWidth, this.gridSizeHeight], 
@@ -371,20 +368,16 @@ export default class CanvasManager {
         (!this.deadZone || !this.isPointInDeadZone(neighbor.x, neighbor.y, this.deadZone))
       )
     
-    // Si la méthode classique trouve des voisins, l'utiliser
     if (classicNeighbors.length > 0) {
       return classicNeighbors
     }
     
-    // Sinon, utiliser la méthode flexible pour les points problématiques
     const flexibleNeighbors = allValidPoints.filter(candidate => {
       if (candidate.x === point.x && candidate.y === point.y) return false
       
-      // Calculer la distance
       const dx = Math.abs(candidate.x - point.x)
       const dy = Math.abs(candidate.y - point.y)
       
-      // Accepter les connexions dans un rayon raisonnable
       const maxDistance = Math.max(this.gridSizeWidth, this.gridSizeHeight) * 1.5
       const distance = Math.sqrt(dx * dx + dy * dy)
       
@@ -412,12 +405,10 @@ export default class CanvasManager {
       )
     }
     
-    // Marquer le point de départ et d'arrivée
     this.drawCircle(chemin[0].x, chemin[0].y, 6, 'blue')
     this.drawCircle(chemin[chemin.length - 1].x, chemin[chemin.length - 1].y, 6, 'red')
   }
 
-  // Interactive Pathfinding Methods
   public setupInteractivePathfinding(): void {
     this.canvas.addEventListener('click', this.handleCanvasClick.bind(this))
     this.setupButtons()
@@ -460,10 +451,8 @@ export default class CanvasManager {
   }
 
   private findNearestGridPoint(x: number, y: number): Point | null {
-    // Créer une liste combinée de tous les points disponibles
     const availablePoints = [...this.gridPoints]
     
-    // Si une deadZone existe, ajouter les points de bordure qui ne sont pas déjà dans gridPoints
     if (this.deadZone) {
       const deadZoneBorderPoints = this.getDeadZoneBorderPoints(this.deadZone)
       
@@ -475,7 +464,6 @@ export default class CanvasManager {
       }
     }
 
-    // Chercher le point le plus proche dans la liste combinée
     return availablePoints.reduce((nearest: Point | null, point) => {
       const distance = Math.sqrt((x - point.x) ** 2 + (y - point.y) ** 2)
       if (distance < 25 && (!nearest || distance < Math.sqrt((x - nearest.x) ** 2 + (y - nearest.y) ** 2))) {
@@ -496,7 +484,6 @@ export default class CanvasManager {
       bottom: deadZone.basePoint.y + halfHeight
     }
 
-    // Points sur les bordures horizontales (haut/bas) - alignés sur la grille
     for (let x = Math.ceil(bounds.left / this.gridSizeWidth) * this.gridSizeWidth; x <= bounds.right; x += this.gridSizeWidth) {
       if (x >= bounds.left && x <= bounds.right && x >= 0 && x <= this.width) {
         if (bounds.top >= 0 && bounds.top <= this.height) {
@@ -508,7 +495,6 @@ export default class CanvasManager {
       }
     }
 
-    // Points sur les bordures verticales (gauche/droite) - alignés sur la grille
     for (let y = Math.ceil(bounds.top / this.gridSizeHeight) * this.gridSizeHeight; y <= bounds.bottom; y += this.gridSizeHeight) {
       if (y >= bounds.top && y <= bounds.bottom && y >= 0 && y <= this.height) {
         if (bounds.left >= 0 && bounds.left <= this.width) {
@@ -520,7 +506,6 @@ export default class CanvasManager {
       }
     }
 
-    // Ajouter les coins exacts de la deadZone (seulement s'ils sont dans les limites du canvas)
     const corners = [
       { x: bounds.left, y: bounds.top },
       { x: bounds.right, y: bounds.top },
@@ -534,7 +519,6 @@ export default class CanvasManager {
       }
     })
 
-    // Filtrer les doublons avec Map pour performance optimale
     const uniquePoints = new Map<string, Point>()
     points.forEach(point => {
       const key = `${point.x},${point.y}`
