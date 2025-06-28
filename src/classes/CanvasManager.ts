@@ -221,8 +221,8 @@ export default class CanvasManager {
   /**
    * Dessine tous les chemins avec le style Tron bleu néon
    */
-  public drawTronPaths(lineWidth: number = 2, showEndCircles: boolean = true): void {
-    this.renderer.drawTronPaths(this.randomPaths, lineWidth, showEndCircles)
+  public drawTronPaths(lineWidth: number = 2, showEndCircles: boolean = true, tronColor: string = '#00FFFF'): void {
+    this.renderer.drawTronPaths(this.randomPaths, lineWidth, showEndCircles, tronColor)
   }
 
   /**
@@ -232,7 +232,8 @@ export default class CanvasManager {
     lineWidth: number = 2, 
     durationMs: number = 2000, // Durée totale en millisecondes
     clearFirst: boolean = true,
-    onComplete?: () => void
+    onComplete?: () => void,
+    tronColor: string = '#00FFFF'
   ): void {
     if (this.randomPaths.length === 0) {
       onComplete?.()
@@ -256,15 +257,15 @@ export default class CanvasManager {
       this.renderer.save()
       this.renderer.setLineWidth(lineWidth)
       
-      // Dessiner chaque chemin partiellement
-      this.randomPaths.forEach((randomPath, pathIndex) => {
-        if (randomPath.path && randomPath.path.length >= 2) {
-          const reversedPath = [...randomPath.path].reverse()
-          const endPoint = reversedPath[reversedPath.length - 1]
-          const hasEndCircle = !this.isEndPointOnIntersection(pathIndex, endPoint)
-          this.renderer.drawTronPathPartial(reversedPath, progress, lineWidth, true, hasEndCircle)
-        }
-      })
+              // Dessiner chaque chemin partiellement
+        this.randomPaths.forEach((randomPath, pathIndex) => {
+          if (randomPath.path && randomPath.path.length >= 2) {
+            const reversedPath = [...randomPath.path].reverse()
+            const endPoint = reversedPath[reversedPath.length - 1]
+            const hasEndCircle = !this.isEndPointOnIntersection(pathIndex, endPoint)
+            this.renderer.drawTronPathPartial(reversedPath, progress, lineWidth, true, hasEndCircle, tronColor)
+          }
+        })
       
       this.renderer.restore()
 
@@ -280,7 +281,7 @@ export default class CanvasManager {
           console.log(`🎯 Animation de ${endPoints.length} cercles (${this.randomPaths.length - endPoints.length} supprimés pour intersections)`)
           // Animer tous les cercles valides en parallèle
           Promise.all(endPoints.map(endPoint => 
-            this.animateEndCircle(endPoint, 300, 6)  // Rayon 6 pixels
+            this.animateEndCircle(endPoint, 300, 6, tronColor)  // Rayon 6 pixels
           )).then(() => {
             if (onComplete) {
               onComplete()
@@ -316,10 +317,11 @@ export default class CanvasManager {
   public animateTronPathsSlow(
     lineWidth: number = 2,
     clearFirst: boolean = true,
-    onComplete?: () => void
+    onComplete?: () => void,
+    tronColor: string = '#00FFFF'
   ): void {
     console.log('🐌 Animation Tron LENTE')
-    this.animateTronPaths(lineWidth, 4000, clearFirst, onComplete) // 4 secondes
+    this.animateTronPaths(lineWidth, 4000, clearFirst, onComplete, tronColor) // 4 secondes
   }
 
   /**
@@ -328,10 +330,11 @@ export default class CanvasManager {
   public animateTronPathsNormal(
     lineWidth: number = 2,
     clearFirst: boolean = true,
-    onComplete?: () => void
+    onComplete?: () => void,
+    tronColor: string = '#00FFFF'
   ): void {
     console.log('🚶 Animation Tron NORMALE')
-    this.animateTronPaths(lineWidth, 2500, clearFirst, onComplete) // 2.5 secondes
+    this.animateTronPaths(lineWidth, 2500, clearFirst, onComplete, tronColor) // 2.5 secondes
   }
 
   /**
@@ -340,10 +343,11 @@ export default class CanvasManager {
   public animateTronPathsFast(
     lineWidth: number = 2,
     clearFirst: boolean = true,
-    onComplete?: () => void
+    onComplete?: () => void,
+    tronColor: string = '#00FFFF'
   ): void {
     console.log('🚀 Animation Tron RAPIDE')
-    this.animateTronPaths(lineWidth, 1500, clearFirst, onComplete) // 1.5 secondes
+    this.animateTronPaths(lineWidth, 1500, clearFirst, onComplete, tronColor) // 1.5 secondes
   }
 
   /**
@@ -352,10 +356,11 @@ export default class CanvasManager {
   public animateTronPathsVeryFast(
     lineWidth: number = 2,
     clearFirst: boolean = true,
-    onComplete?: () => void
+    onComplete?: () => void,
+    tronColor: string = '#00FFFF'
   ): void {
     console.log('⚡ Animation Tron TRÈS RAPIDE')
-    this.animateTronPaths(lineWidth, 800, clearFirst, onComplete) // 0.8 secondes
+    this.animateTronPaths(lineWidth, 800, clearFirst, onComplete, tronColor) // 0.8 secondes
   }
 
   /**
@@ -366,7 +371,8 @@ export default class CanvasManager {
     lineWidth: number = 2,
     durationMs: number = 2000,
     clearFirst: boolean = true,
-    onComplete?: () => void
+    onComplete?: () => void,
+    tronColor: string = '#00FFFF'
   ): void {
     if (pathIndex < 0 || pathIndex >= this.randomPaths.length) {
       console.warn('Index de chemin invalide:', pathIndex)
@@ -399,7 +405,7 @@ export default class CanvasManager {
       this.renderer.save()
       const endPoint = reversedPath[reversedPath.length - 1]
       const hasEndCircle = !this.isEndPointOnIntersection(pathIndex, endPoint)
-      this.renderer.drawTronPathPartial(reversedPath, progress, lineWidth, true, hasEndCircle)
+      this.renderer.drawTronPathPartial(reversedPath, progress, lineWidth, true, hasEndCircle, tronColor)
       this.renderer.restore()
 
       if (progress < 1.0) {
@@ -410,7 +416,7 @@ export default class CanvasManager {
         
         // Vérifier si ce point final est sur une intersection
         if (!this.isEndPointOnIntersection(pathIndex, endPoint)) {
-          this.animateEndCircle(endPoint, 300, 6).then(() => {  // Rayon 6 pixels
+          this.animateEndCircle(endPoint, 300, 6, tronColor).then(() => {  // Rayon 6 pixels
             if (onComplete) {
               onComplete()
             }
@@ -443,7 +449,8 @@ export default class CanvasManager {
     pathDurationMs: number = 1500,
     pathDelayMs: number = 200,
     clearFirst: boolean = true,
-    onComplete?: () => void
+    onComplete?: () => void,
+    tronColor: string = '#00FFFF'
   ): void {
     if (this.randomPaths.length === 0) {
       onComplete?.()
@@ -484,18 +491,18 @@ export default class CanvasManager {
           completedPaths.forEach(completedPath => {
             const endPoint = completedPath.path[completedPath.path.length - 1]
             const hasEndCircle = !this.isEndPointOnIntersection(completedPath.index, endPoint)
-            this.renderer.drawTronPathPartial(completedPath.path, 1.0, lineWidth, true, hasEndCircle)
+            this.renderer.drawTronPathPartial(completedPath.path, 1.0, lineWidth, true, hasEndCircle, tronColor)
           })
           
           // Redessiner tous les cercles déjà terminés
           completedCircles.forEach(circle => {
-            this.renderer.drawTronEndCircle(circle.endPoint, circle.radius, 1.0)
+            this.renderer.drawTronEndCircle(circle.endPoint, circle.radius, 1.0, tronColor)
           })
 
           // Dessiner le chemin en cours d'animation
           const endPoint = reversedPath[reversedPath.length - 1]
           const hasEndCircle = !this.isEndPointOnIntersection(pathInOriginalArray, endPoint)
-          this.renderer.drawTronPathPartial(reversedPath, progress, lineWidth, true, hasEndCircle)
+          this.renderer.drawTronPathPartial(reversedPath, progress, lineWidth, true, hasEndCircle, tronColor)
           this.renderer.restore()
 
           if (progress < 1.0) {
@@ -511,7 +518,7 @@ export default class CanvasManager {
             const endPoint = reversedPath[reversedPath.length - 1]
             if (!this.isEndPointOnIntersection(pathInOriginalArray, endPoint)) {
               // Animer le cercle avec délai et fondu
-              this.animateEndCircle(endPoint, 300, 6).then(() => {  // Rayon 6 pixels
+              this.animateEndCircle(endPoint, 300, 6, tronColor).then(() => {  // Rayon 6 pixels
                 // Ajouter le cercle aux cercles terminés
                 completedCircles.push({
                   endPoint: endPoint,
@@ -870,7 +877,8 @@ export default class CanvasManager {
   private animateEndCircle(
     endPoint: Point, 
     animationDuration: number = 300,
-    radius: number = 6
+    radius: number = 6,
+    tronColor: string = '#00FFFF'
   ): Promise<void> {
     return new Promise(resolve => {
       const startTime = performance.now()
@@ -884,7 +892,7 @@ export default class CanvasManager {
         
         // Dessiner seulement le cercle avec l'arc progressif (sans effacer le reste)
         this.renderer.save()
-        this.renderer.drawTronEndCirclePartial(endPoint, radius, easedProgress)
+        this.renderer.drawTronEndCirclePartial(endPoint, radius, easedProgress, tronColor)
         this.renderer.restore()
         
         if (progress < 1.0) {

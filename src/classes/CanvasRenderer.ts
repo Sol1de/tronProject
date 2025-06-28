@@ -270,7 +270,7 @@ export default class CanvasRenderer {
   /**
    * Dessine tous les chemins avec style Tron et cercles de fin (en évitant les intersections)
    */
-  public drawTronPaths(randomPaths: RandomPath[], lineWidth: number = 2, showEndCircles: boolean = true): void {
+  public drawTronPaths(randomPaths: RandomPath[], lineWidth: number = 2, showEndCircles: boolean = true, tronColor: string = '#00FFFF'): void {
     // Sauvegarder l'état actuel du contexte
     this.context.save()
     
@@ -282,7 +282,7 @@ export default class CanvasRenderer {
     
     randomPaths.forEach((randomPath, index) => {
       if (randomPath.path) {
-        this.drawTronPath(randomPath.path, lineWidth)
+        this.drawTronPath(randomPath.path, lineWidth, tronColor)
         
         // Ajouter le cercle à la fin du chemin si demandé et si pas d'intersection
         if (showEndCircles) {
@@ -291,7 +291,7 @@ export default class CanvasRenderer {
           
           // Vérifier si ce point final est sur une intersection
           if (!this.isEndPointOnIntersection(index, endPoint, randomPaths)) {
-            this.drawTronEndCircle(endPoint, 6)
+            this.drawTronEndCircle(endPoint, 6, 1.0, tronColor)
           } else {
             circlesSkipped++
           }
@@ -310,12 +310,12 @@ export default class CanvasRenderer {
   /**
    * Dessine un chemin unique avec le style Tron bleu néon
    */
-  private drawTronPath(path: Point[], lineWidth: number = 2): void {
+  private drawTronPath(path: Point[], lineWidth: number = 2, tronColor: string = '#00FFFF'): void {
     if (path.length < 2) return
     
-    // Couleurs bleu néon Tron
-    const tronBlue = '#00FFFF'
-    const tronGlow = '#0080FF'
+    // Couleurs Tron personnalisables
+    const tronBlue = tronColor
+    const tronGlow = this.adjustColorBrightness(tronColor, -0.3) // Couleur plus sombre pour le glow
     
     // Effet de lueur (glow) - dessiner plusieurs couches
     for (let layer = 0; layer < 3; layer++) {
@@ -360,7 +360,7 @@ export default class CanvasRenderer {
   /**
    * Dessine un chemin partiellement avec interpolation fluide
    */
-  public drawTronPathPartial(path: Point[], progress: number, lineWidth: number = 2, shortenEnd: boolean = true, hasEndCircle: boolean = true): void {
+  public drawTronPathPartial(path: Point[], progress: number, lineWidth: number = 2, shortenEnd: boolean = true, hasEndCircle: boolean = true, tronColor: string = '#00FFFF'): void {
     if (path.length < 2 || progress <= 0) return
     
     // Limiter le progrès à 1.0
@@ -406,19 +406,19 @@ export default class CanvasRenderer {
     
     // Dessiner le chemin partiel avec style Tron
     if (drawPath.length >= 2) {
-      this.drawTronPathComplete(drawPath, lineWidth)
+      this.drawTronPathComplete(drawPath, lineWidth, tronColor)
     }
   }
 
   /**
    * Dessine un chemin complet avec style Tron (sans numérotation)
    */
-  public drawTronPathComplete(path: Point[], lineWidth: number = 2): void {
+  public drawTronPathComplete(path: Point[], lineWidth: number = 2, tronColor: string = '#00FFFF'): void {
     if (path.length < 2) return
     
-    // Couleurs bleu néon Tron
-    const tronBlue = '#00FFFF'
-    const tronGlow = '#0080FF'
+    // Couleurs Tron personnalisables
+    const tronBlue = tronColor
+    const tronGlow = this.adjustColorBrightness(tronColor, -0.3) // Couleur plus sombre pour le glow
     
     // Effet de lueur (glow) - dessiner plusieurs couches
     for (let layer = 0; layer < 3; layer++) {
@@ -481,11 +481,11 @@ export default class CanvasRenderer {
   /**
    * Dessine un cercle néon avec bordure nette de 1 pixel (sans glow)
    */
-  public drawTronEndCircle(point: Point, radius: number = 6, alpha: number = 1.0): void {
+  public drawTronEndCircle(point: Point, radius: number = 6, alpha: number = 1.0, tronColor: string = '#00FFFF'): void {
     this.context.save()
     
-    // Utiliser la même couleur que les chemins (bleu néon Tron)
-    const tronBlue = '#00FFFF'  // Même couleur que les paths
+    // Utiliser la couleur configurée
+    const tronBlue = tronColor
     
     // Dessiner seulement la bordure nette sans aucun effet
     this.context.beginPath()
@@ -508,13 +508,13 @@ export default class CanvasRenderer {
   /**
    * Dessine un cercle partiellement (animation d'arc progressif) avec bordure nette de 1 pixel
    */
-  public drawTronEndCirclePartial(point: Point, radius: number = 6, progress: number = 1.0): void {
+  public drawTronEndCirclePartial(point: Point, radius: number = 6, progress: number = 1.0, tronColor: string = '#00FFFF'): void {
     if (progress <= 0) return
     
     this.context.save()
     
-    // Utiliser la même couleur que les chemins (bleu néon Tron)
-    const tronBlue = '#00FFFF'
+    // Utiliser la couleur configurée
+    const tronBlue = tronColor
     
     // Calculer l'angle final basé sur le progrès (0 à 2π)
     const endAngle = progress * 2 * Math.PI
@@ -536,6 +536,32 @@ export default class CanvasRenderer {
     this.context.stroke()
     
     this.context.restore()
+  }
+
+  /**
+   * Utilitaire pour ajuster la luminosité d'une couleur hexadécimale
+   */
+  private adjustColorBrightness(hex: string, percent: number): string {
+    // Enlever le # si présent
+    hex = hex.replace('#', '')
+    
+    // Convertir hex en RGB
+    const r = parseInt(hex.substr(0, 2), 16)
+    const g = parseInt(hex.substr(2, 2), 16)
+    const b = parseInt(hex.substr(4, 2), 16)
+    
+    // Ajuster la luminosité
+    const newR = Math.max(0, Math.min(255, r + (r * percent)))
+    const newG = Math.max(0, Math.min(255, g + (g * percent)))
+    const newB = Math.max(0, Math.min(255, b + (b * percent)))
+    
+    // Convertir de nouveau en hex
+    const toHex = (n: number) => {
+      const hex = Math.round(n).toString(16)
+      return hex.length === 1 ? '0' + hex : hex
+    }
+    
+    return `#${toHex(newR)}${toHex(newG)}${toHex(newB)}`
   }
 
   /**
@@ -576,19 +602,19 @@ export default class CanvasRenderer {
       const progress = Math.min(elapsedTime / durationMs, 1.0)
 
       // Redessiner tous les chemins avec le progrès actuel
-      animationPaths.forEach(animPath => {
-        if (animPath.path.length >= 2) {
-          // Marquer comme complété si le progrès est fini
-          if (progress >= 1.0) {
-            animPath.isCompleted = true
+              animationPaths.forEach(animPath => {
+          if (animPath.path.length >= 2) {
+            // Marquer comme complété si le progrès est fini
+            if (progress >= 1.0) {
+              animPath.isCompleted = true
+            }
+            
+            // Vérifier si ce path a un cercle de fin
+            const endPoint = animPath.path[animPath.path.length - 1]
+            const hasEndCircle = !this.isEndPointOnIntersection(animPath.pathIndex, endPoint, randomPaths)
+            this.drawTronPathPartial(animPath.path, progress, lineWidth, true, hasEndCircle, '#00FFFF')
           }
-          
-          // Vérifier si ce path a un cercle de fin
-          const endPoint = animPath.path[animPath.path.length - 1]
-          const hasEndCircle = !this.isEndPointOnIntersection(animPath.pathIndex, endPoint, randomPaths)
-          this.drawTronPathPartial(animPath.path, progress, lineWidth, true, hasEndCircle)
-        }
-      })
+        })
 
       if (progress < 1.0) {
         requestAnimationFrame(animateFrame)
@@ -636,7 +662,7 @@ export default class CanvasRenderer {
       if (pathIndex !== undefined && allPaths) {
         hasEndCircle = !this.isEndPointOnIntersection(pathIndex, endPoint, allPaths)
       }
-      this.drawTronPathPartial(reversedPath, progress, lineWidth, true, hasEndCircle)
+      this.drawTronPathPartial(reversedPath, progress, lineWidth, true, hasEndCircle, '#00FFFF')
 
       if (progress < 1.0) {
         requestAnimationFrame(animateFrame)

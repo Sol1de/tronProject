@@ -393,40 +393,41 @@ function launchAnimation(): void {
     updateStatus('Animation terminée - Prêt pour une nouvelle animation')
   }
   
-  // Lancer l'animation selon le mode sélectionné avec les couleurs de la config
-  switch (currentConfig.animation.mode) {
-    case 'simultaneous':
-      switch (currentConfig.animation.speed) {
-        case 'very-fast':
-          canvas.animateTronPathsVeryFast(currentConfig.animation.lineWidth, true, onComplete)
-          break
-        case 'fast':
-          canvas.animateTronPathsFast(currentConfig.animation.lineWidth, true, onComplete)
-          break
-        case 'normal':
-          canvas.animateTronPathsNormal(currentConfig.animation.lineWidth, true, onComplete)
-          break
-        case 'slow':
-          canvas.animateTronPathsSlow(currentConfig.animation.lineWidth, true, onComplete)
-          break
-      }
-      break
-    
-    case 'sequential':
-      canvas.animateTronPathsSequentially(
-        currentConfig.animation.lineWidth,
-        currentConfig.animation.duration / currentConfig.paths.numberOfPaths,
-        100,
-        true,
-        onComplete
-      )
-      break
-    
-    case 'static':
-      canvas.drawTronPaths(currentConfig.animation.lineWidth, true)
-      onComplete()
-      break
-  }
+      // Lancer l'animation selon le mode sélectionné avec les couleurs de la config
+    switch (currentConfig.animation.mode) {
+      case 'simultaneous':
+        switch (currentConfig.animation.speed) {
+          case 'very-fast':
+            canvas.animateTronPathsVeryFast(currentConfig.animation.lineWidth, true, onComplete, currentConfig.paths.tronColor)
+            break
+          case 'fast':
+            canvas.animateTronPathsFast(currentConfig.animation.lineWidth, true, onComplete, currentConfig.paths.tronColor)
+            break
+          case 'normal':
+            canvas.animateTronPathsNormal(currentConfig.animation.lineWidth, true, onComplete, currentConfig.paths.tronColor)
+            break
+          case 'slow':
+            canvas.animateTronPathsSlow(currentConfig.animation.lineWidth, true, onComplete, currentConfig.paths.tronColor)
+            break
+        }
+        break
+      
+      case 'sequential':
+        canvas.animateTronPathsSequentially(
+          currentConfig.animation.lineWidth,
+          currentConfig.animation.duration / currentConfig.paths.numberOfPaths,
+          100,
+          true,
+          onComplete,
+          currentConfig.paths.tronColor
+        )
+        break
+      
+      case 'static':
+        canvas.drawTronPaths(currentConfig.animation.lineWidth, true, currentConfig.paths.tronColor)
+        onComplete()
+        break
+    }
   
   // Déclencher l'animation du logo
   if (deadZone) {
