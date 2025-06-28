@@ -90,15 +90,15 @@ export default class CanvasRenderer {
    * Dessine plusieurs chemins aléatoires avec des couleurs différentes
    */
   public drawRandomPaths(randomPaths: RandomPath[], _strokeStyle: string = 'orange', lineWidth: number = 2): void {
-    randomPaths.forEach((randomPath, index) => {
+    randomPaths.forEach((randomPath) => {
       if (randomPath.path) {
         const colors = ['orange', 'cyan', 'magenta', 'lime', 'yellow', 'pink', 'lightblue', 'lightgreen']
-        const color = colors[index % colors.length]
+        const color = colors[Math.floor(Math.random() * colors.length)]
         this.drawPath(randomPath.path, color, lineWidth)
         
         // Ajouter un numéro au milieu du chemin
         const midPoint = randomPath.path[Math.floor(randomPath.path.length / 2)]
-        this.drawText(`${index + 1}`, midPoint.x + 10, midPoint.y - 10, 'white', '12px Arial')
+        this.drawText(`${Math.floor(Math.random() * 8 + 1)}`, midPoint.x + 10, midPoint.y - 10, 'white', '12px Arial')
       }
     })
   }
@@ -282,14 +282,15 @@ export default class CanvasRenderer {
     this.context.lineCap = 'round'
     this.context.lineJoin = 'round'
     
-    randomPaths.forEach((randomPath, index) => {
+    randomPaths.forEach((randomPath) => {
       if (randomPath.path) {
-        this.drawTronPath(randomPath.path, lineWidth, index)
+        this.drawTronPath(randomPath.path, lineWidth)
         
         // Ajouter le cercle à la fin du chemin si demandé
         if (showEndCircles) {
-          const endPoint = randomPath.path[randomPath.path.length - 1]
-          this.drawTronEndCircle(endPoint, 2)
+          // Le premier point du chemin original est le point final (dans la deadzone)
+          const endPoint = randomPath.path[0]  
+          this.drawTronEndCircle(endPoint, 4)
         }
       }
     })
@@ -301,7 +302,7 @@ export default class CanvasRenderer {
   /**
    * Dessine un chemin unique avec le style Tron bleu néon
    */
-  private drawTronPath(path: Point[], lineWidth: number = 2, pathIndex: number = 0): void {
+  private drawTronPath(path: Point[], lineWidth: number = 2): void {
     if (path.length < 2) return
     
     // Couleurs bleu néon Tron
@@ -349,46 +350,22 @@ export default class CanvasRenderer {
   }
 
   /**
-   * Dessine du texte avec style Tron
-   */
-  private drawTronText(text: string, x: number, y: number): void {
-    this.context.save()
-    
-    // Configuration du texte Tron
-    this.context.font = 'bold 12px monospace'
-    this.context.textAlign = 'center'
-    this.context.textBaseline = 'middle'
-    
-    // Effet de lueur sur le texte
-    this.context.strokeStyle = '#00FFFF'
-    this.context.lineWidth = 2
-    this.context.globalAlpha = 0.3
-    this.context.shadowBlur = 8
-    this.context.shadowColor = '#00FFFF'
-    this.context.strokeText(text, x, y)
-    
-    // Texte principal
-    this.context.fillStyle = '#FFFFFF'
-    this.context.globalAlpha = 1.0
-    this.context.shadowBlur = 4
-    this.context.shadowColor = '#00FFFF'
-    this.context.fillText(text, x, y)
-    
-    this.context.restore()
-  }
-
-  /**
    * Dessine un chemin partiellement avec interpolation fluide
    */
-  public drawTronPathPartial(path: Point[], progress: number, lineWidth: number = 2, showEndCircle: boolean = true): void {
+  public drawTronPathPartial(path: Point[], progress: number, lineWidth: number = 2, shortenEnd: boolean = true): void {
     if (path.length < 2 || progress <= 0) return
     
     // Limiter le progrès à 1.0
     progress = Math.min(progress, 1.0)
     
-    // Calculer le point final basé sur le progrès
+    // Calculer la longueur totale et la longueur cible
     const totalLength = this.calculatePathLength(path)
-    const targetLength = totalLength * progress
+    let targetLength = totalLength * progress
+    
+    // Raccourcir le chemin de 8 pixels pour éviter que le trait apparaisse dans le cercle
+    if (shortenEnd && progress >= 1.0) {
+      targetLength = Math.max(0, targetLength - 8)
+    }
     
     let currentLength = 0
     let lastPoint = path[0]
@@ -422,12 +399,6 @@ export default class CanvasRenderer {
     // Dessiner le chemin partiel avec style Tron
     if (drawPath.length >= 2) {
       this.drawTronPathComplete(drawPath, lineWidth)
-      
-      // Dessiner le cercle à la fin si l'animation est terminée
-      if (showEndCircle && progress >= 1.0) {
-        const endPoint = path[path.length - 1] // Point final du chemin original
-        this.drawTronEndCircle(endPoint, 2)
-      }
     }
   }
 
@@ -502,44 +473,83 @@ export default class CanvasRenderer {
   /**
    * Dessine un cercle néon avec bordure et effet glow à la fin d'un chemin
    */
-  public drawTronEndCircle(point: Point, radius: number = 2): void {
+  public drawTronEndCircle(point: Point, radius: number = 4, alpha: number = 1.0): void {
     this.context.save()
     
-    // Couleur néon plus foncée que les chemins
-    const darkNeonBlue = '#0080CC' // Bleu néon plus foncé
-    const darkGlow = '#0066AA'     // Glow plus foncé
+    // Utiliser la même couleur que les chemins (bleu néon Tron)
+    const tronBlue = '#00FFFF'  // Même couleur que les paths
+    const tronGlow = '#0080FF'  // Glow associé
     
-    // Effet de lueur (glow) - dessiner plusieurs couches
-    for (let layer = 0; layer < 3; layer++) {
+    // Effet de lueur (glow) réduit - seulement 2 couches pour éviter l'effet "plein"
+    for (let layer = 0; layer < 2; layer++) {
       this.context.beginPath()
-      this.context.arc(point.x, point.y, radius + layer, 0, 2 * Math.PI)
+      this.context.arc(point.x, point.y, radius, 0, 2 * Math.PI)
       
-      // Configuration selon la couche
+      // Configuration selon la couche - glow très réduit
       switch (layer) {
-        case 0: // Cercle principal
-          this.context.strokeStyle = darkNeonBlue
+        case 0: // Cercle principal net
+          this.context.strokeStyle = tronBlue
           this.context.lineWidth = 1.5
-          this.context.globalAlpha = 1.0
-          this.context.shadowBlur = 8
-          this.context.shadowColor = darkNeonBlue
+          this.context.globalAlpha = alpha
+          this.context.shadowBlur = 3  // Réduit de 8 à 3
+          this.context.shadowColor = tronBlue
           break
-        case 1: // Glow moyen
-          this.context.strokeStyle = darkGlow
-          this.context.lineWidth = 1
-          this.context.globalAlpha = 0.4
-          this.context.shadowBlur = 12
-          this.context.shadowColor = darkNeonBlue
-          break
-        case 2: // Glow extérieur
-          this.context.strokeStyle = darkGlow
+        case 1: // Glow léger uniquement
+          this.context.strokeStyle = tronGlow
           this.context.lineWidth = 0.5
-          this.context.globalAlpha = 0.2
-          this.context.shadowBlur = 16
-          this.context.shadowColor = darkNeonBlue
+          this.context.globalAlpha = alpha * 0.2  // Réduit de 0.4 à 0.2
+          this.context.shadowBlur = 6  // Réduit de 12 à 6
+          this.context.shadowColor = tronBlue
           break
       }
       
-      // Dessiner uniquement la bordure (pas de remplissage)
+      // Dessiner uniquement la bordure (stroke, pas fill)
+      this.context.stroke()
+    }
+    
+    this.context.restore()
+  }
+
+  /**
+   * Dessine un cercle partiellement (animation d'arc progressif)
+   */
+  public drawTronEndCirclePartial(point: Point, radius: number = 4, progress: number = 1.0): void {
+    if (progress <= 0) return
+    
+    this.context.save()
+    
+    // Utiliser la même couleur que les chemins (bleu néon Tron)
+    const tronBlue = '#00FFFF'
+    const tronGlow = '#0080FF'
+    
+    // Calculer l'angle final basé sur le progrès (0 à 2π)
+    const endAngle = progress * 2 * Math.PI
+    
+    // Effet de lueur (glow) réduit - seulement 2 couches
+    for (let layer = 0; layer < 2; layer++) {
+      this.context.beginPath()
+      // Commencer à -π/2 (12h) et dessiner dans le sens horaire
+      this.context.arc(point.x, point.y, radius, -Math.PI / 2, -Math.PI / 2 + endAngle)
+      
+      // Configuration selon la couche
+      switch (layer) {
+        case 0: // Cercle principal net
+          this.context.strokeStyle = tronBlue
+          this.context.lineWidth = 1.5
+          this.context.globalAlpha = 1.0
+          this.context.shadowBlur = 3
+          this.context.shadowColor = tronBlue
+          break
+        case 1: // Glow léger uniquement
+          this.context.strokeStyle = tronGlow
+          this.context.lineWidth = 0.5
+          this.context.globalAlpha = 0.2
+          this.context.shadowBlur = 6
+          this.context.shadowColor = tronBlue
+          break
+      }
+      
+      // Dessiner seulement l'arc
       this.context.stroke()
     }
     
@@ -611,7 +621,6 @@ export default class CanvasRenderer {
    */
   public animateTronPath(
     path: Point[], 
-    pathIndex: number = 0,
     lineWidth: number = 2,
     durationMs: number = 2000, // Durée totale en millisecondes
     onComplete?: () => void

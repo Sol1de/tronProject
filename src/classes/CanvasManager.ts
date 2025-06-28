@@ -267,7 +267,25 @@ export default class CanvasManager {
       if (progress < 1.0) {
         requestAnimationFrame(animateFrame)
       } else {
-        onComplete?.()
+        // Tous les chemins sont terminés, maintenant animer tous les cercles simultanément
+        const endPoints = this.randomPaths
+          .filter(rp => rp.path && rp.path.length >= 2)
+          .map(rp => rp.path![0])  // Premier point = point final dans la deadzone
+        
+        if (endPoints.length > 0) {
+          // Animer tous les cercles en parallèle
+          Promise.all(endPoints.map(endPoint => 
+            this.animateEndCircle(endPoint, 300, 4)  // Rayon 4 pixels
+          )).then(() => {
+            if (onComplete) {
+              onComplete()
+            }
+          })
+        } else {
+          if (onComplete) {
+            onComplete()
+          }
+        }
       }
     }
 
@@ -380,7 +398,13 @@ export default class CanvasManager {
       if (progress < 1.0) {
         requestAnimationFrame(animateFrame)
       } else {
-        onComplete?.()
+        // Animation du chemin terminée, maintenant animer le cercle avec délai et fondu
+        const endPoint = reversedPath[reversedPath.length - 1]
+        this.animateEndCircle(endPoint, 300, 4).then(() => {
+          if (onComplete) {
+            onComplete()
+          }
+        })
       }
     }
 
@@ -413,6 +437,7 @@ export default class CanvasManager {
     const validPaths = this.randomPaths.filter(rp => rp.path && rp.path.length >= 2)
     let currentPathIndex = 0
     const completedPaths: Array<{path: Point[], index: number}> = [] // Garder trace des chemins terminés
+    const completedCircles: Array<{endPoint: Point, radius: number}> = [] // Garder trace des cercles terminés
 
     const animateNextPath = () => {
       if (currentPathIndex >= validPaths.length) {
@@ -438,10 +463,15 @@ export default class CanvasManager {
             this.redraw(showGrid)
           }
 
-          // Redessiner tous les chemins déjà terminés avec leurs cercles
+          // Redessiner tous les chemins déjà terminés
           this.renderer.save()
           completedPaths.forEach(completedPath => {
             this.renderer.drawTronPathPartial(completedPath.path, 1.0, lineWidth, true)
+          })
+          
+          // Redessiner tous les cercles déjà terminés
+          completedCircles.forEach(circle => {
+            this.renderer.drawTronEndCircle(circle.endPoint, circle.radius, 1.0)
           })
 
           // Dessiner le chemin en cours d'animation
@@ -457,8 +487,18 @@ export default class CanvasManager {
               index: pathInOriginalArray
             })
             
-            currentPathIndex++
-            setTimeout(animateNextPath, pathDelayMs)
+            // Animer le cercle avec délai et fondu
+            const endPoint = reversedPath[reversedPath.length - 1]
+            this.animateEndCircle(endPoint, 300, 4).then(() => {
+              // Ajouter le cercle aux cercles terminés
+              completedCircles.push({
+                endPoint: endPoint,
+                radius: 4
+              })
+              
+              currentPathIndex++
+              setTimeout(animateNextPath, pathDelayMs)
+            })
           }
         }
 
@@ -727,5 +767,56 @@ export default class CanvasManager {
         }, 1000)
       })
     }, 500)
+  }
+
+  /**
+   * Anime un cercle de fin avec une animation d'arc progressif (sans délai)
+   */
+  private animateEndCircle(
+    endPoint: Point, 
+    animationDuration: number = 300,
+    radius: number = 4
+  ): Promise<void> {
+    return new Promise(resolve => {
+      const startTime = performance.now()
+      
+      const arcAnimation = (currentTime: number) => {
+        const elapsed = currentTime - startTime
+        const progress = Math.min(elapsed / animationDuration, 1.0)
+        
+        // Fonction d'easing pour un arc plus fluide
+        const easedProgress = progress * progress * (3 - 2 * progress) // smoothstep
+        
+        // Dessiner seulement le cercle avec l'arc progressif (sans effacer le reste)
+        this.renderer.save()
+        this.renderer.drawTronEndCirclePartial(endPoint, radius, easedProgress)
+        this.renderer.restore()
+        
+        if (progress < 1.0) {
+          requestAnimationFrame(arcAnimation)
+        } else {
+          resolve()
+        }
+      }
+      
+      requestAnimationFrame(arcAnimation)
+    })
+  }
+
+  /**
+   * Méthode de débogage pour vérifier les positions des cercles
+   */
+  public debugCirclePositions(): void {
+    console.log('🔍 Debug: Positions des cercles')
+    this.randomPaths.forEach((randomPath, index) => {
+      if (randomPath.path && randomPath.path.length >= 2) {
+        const startPoint = randomPath.path[0] // Point dans la deadzone
+        const endPoint = randomPath.path[randomPath.path.length - 1] // Point à la bordure
+        console.log(`Path ${index + 1}:`)
+        console.log(`  - Début (deadzone): (${startPoint.x}, ${startPoint.y})`)
+        console.log(`  - Fin (bordure): (${endPoint.x}, ${endPoint.y})`)
+        console.log(`  - Cercle devrait être à: (${startPoint.x}, ${startPoint.y})`)
+      }
+    })
   }
 } 
