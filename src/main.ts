@@ -90,9 +90,9 @@ function fitSvgInDeadzone(deadZone: {basePoint: {x: number, y: number}, deadZone
   const svgOriginalHeight = 236
   const svgAspectRatio = svgOriginalWidth / svgOriginalHeight
   
-  // Dimensions de la deadzone avec une marge de sécurité
-  const availableWidth = deadZone.deadZoneWidth * 0.7  // 70% pour plus de sécurité
-  const availableHeight = deadZone.deadZoneHeight * 0.7
+  // Dimensions de la deadzone avec une marge de sécurité minimale
+  const availableWidth = deadZone.deadZoneWidth * 0.95  // 95% pour maximiser l'utilisation
+  const availableHeight = deadZone.deadZoneHeight * 0.95
   const deadzoneAspectRatio = availableWidth / availableHeight
   
   let finalWidth: number
@@ -137,6 +137,27 @@ function fitSvgInDeadzone(deadZone: {basePoint: {x: number, y: number}, deadZone
   console.log(`📊 Ratio SVG: ${svgAspectRatio.toFixed(2)} vs Ratio deadzone: ${deadzoneAspectRatio.toFixed(2)}`)
 }
 
+// Fonction pour nettoyer/masquer le logo SVG
+function hideTronLogo(): void {
+  const tronLogo = document.getElementById('tron-logo')
+  const tronSvg = tronLogo?.querySelector('svg')
+  
+  if (tronLogo && tronSvg) {
+    tronLogo.classList.remove('show')
+    tronSvg.classList.remove('active')
+    
+    // Forcer la réinitialisation des propriétés d'animation sur tous les éléments SVG
+    const svgElements = tronSvg.querySelectorAll('[class*="svg-elem-"]')
+    svgElements.forEach(element => {
+      const el = element as HTMLElement
+      el.style.animation = 'none'
+      el.style.transition = 'none'
+    })
+    
+    console.log('🧹 Logo SVG masqué et animation réinitialisée')
+  }
+}
+
 // Fonction pour déclencher l'animation du logo Tron
 function triggerTronLogoAnimation(deadZone?: {basePoint: {x: number, y: number}, deadZoneWidth: number, deadZoneHeight: number}): void {
   console.log('🎨 Déclenchement de l\'animation du logo Tron')
@@ -150,16 +171,35 @@ function triggerTronLogoAnimation(deadZone?: {basePoint: {x: number, y: number},
     fitSvgInDeadzone(deadZone)
   }
   
-  // Masquer d'abord le logo (pour le cas où il était déjà visible)
-  tronLogo.classList.remove('show')
-  tronSvg.classList.remove('active')
+  // Réinitialisation complète : masquer et supprimer toutes les classes
+  hideTronLogo()
   
-  // Afficher le logo et déclencher l'animation immédiatement
+  // Forcer le reflow pour s'assurer que les styles sont appliqués
+  tronLogo.offsetHeight
+  
+  // Attendre un peu puis réactiver les transitions et l'animation
   setTimeout(() => {
+    // Réactiver les transitions CSS sur tous les éléments SVG
+    const svgElements = tronSvg.querySelectorAll('[class*="svg-elem-"]')
+    svgElements.forEach(element => {
+      const el = element as HTMLElement
+      el.style.animation = ''
+      el.style.transition = ''
+    })
+    
+    // Forcer un autre reflow pour s'assurer que les transitions sont réactivées
+    tronSvg.getBoundingClientRect()
+    
+    // Maintenant afficher le logo et déclencher l'animation
     tronLogo.classList.add('show')
-    tronSvg.classList.add('active')
-    console.log('✨ Animation SVG démarrée et visible')
-  }, 100) // Délai minimal pour s'assurer que les classes sont bien supprimées
+    
+    // Déclencher l'animation SVG après un mini délai pour s'assurer que le logo est visible
+    setTimeout(() => {
+      tronSvg.classList.add('active')
+      console.log('✨ Animation SVG déclenchée avec les transitions CSS')
+    }, 50)
+    
+  }, 200) // Délai plus long pour une réinitialisation complète
 }
 
 const canvas = CanvasManager.initCanvas()
@@ -214,13 +254,15 @@ document.getElementById('demonstrateSpeedsBtn')?.addEventListener('click', () =>
   canvas.demonstrateAnimationSpeeds()
 })
 
-// Exposer la fonction pour qu'elle soit accessible depuis CanvasManager
+// Exposer les fonctions pour qu'elles soient accessibles depuis CanvasManager
 declare global {
   interface Window {
     triggerTronLogoAnimation: (deadZone?: {basePoint: {x: number, y: number}, deadZoneWidth: number, deadZoneHeight: number}) => void;
+    hideTronLogo: () => void;
   }
 }
 window.triggerTronLogoAnimation = triggerTronLogoAnimation
+window.hideTronLogo = hideTronLogo
 
 // Exemple d'utilisation avec durée personnalisée (utilisable dans la console)
 // canvas.testTronAnimationWithDuration(3000) // Animation de 3 secondes

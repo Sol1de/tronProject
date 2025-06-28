@@ -657,6 +657,11 @@ export default class CanvasManager {
   public demonstrateTronFeatures(): void {
     console.log('🚀 Démonstration des fonctionnalités Tron fluides')
     
+    // Masquer le logo SVG dès le début d'une nouvelle animation
+    if (typeof window !== 'undefined' && window.hideTronLogo) {
+      window.hideTronLogo()
+    }
+    
     // 1. Toujours générer de nouveaux chemins pour la démo
     console.log('🔄 Génération de nouveaux chemins...')
     this.setRandomPaths() // Génère de nouveaux paths à chaque fois
@@ -706,6 +711,11 @@ export default class CanvasManager {
    * Méthode utilitaire pour tester une animation spécifique
    */
   public testTronAnimation(mode: 'simultaneous' | 'sequential' | 'static' | 'slow' | 'normal' | 'fast' | 'very-fast' = 'simultaneous'): void {
+    // Masquer le logo SVG dès le début d'une nouvelle animation
+    if (typeof window !== 'undefined' && window.hideTronLogo) {
+      window.hideTronLogo()
+    }
+    
     // TOUJOURS générer de nouveaux chemins à chaque test
     console.log('🔄 Génération de nouveaux chemins pour le test...')
     this.setRandomPaths()
@@ -782,6 +792,11 @@ export default class CanvasManager {
    * Test avec durée personnalisée (en millisecondes)
    */
   public testTronAnimationWithDuration(durationMs: number): void {
+    // Masquer le logo SVG dès le début d'une nouvelle animation
+    if (typeof window !== 'undefined' && window.hideTronLogo) {
+      window.hideTronLogo()
+    }
+    
     console.log('🔄 Génération de nouveaux chemins pour le test...')
     this.setRandomPaths()
     console.log(`🎬 Test: Animation fluide avec durée personnalisée (${durationMs}ms)`)
@@ -806,6 +821,11 @@ export default class CanvasManager {
    */
   public demonstrateAnimationSpeeds(): void {
     console.log('🚀 Démonstration des différentes vitesses d\'animation fluide')
+    
+    // Masquer le logo SVG dès le début d'une nouvelle animation
+    if (typeof window !== 'undefined' && window.hideTronLogo) {
+      window.hideTronLogo()
+    }
     
     // Générer de nouveaux chemins
     this.setRandomPaths()
