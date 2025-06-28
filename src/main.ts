@@ -1,7 +1,9 @@
 import './style.css'
 import CanvasManager from './classes/CanvasManager'
 
-// Configuration par défaut
+// Configuration par défaut avec nombre optimal de chemins
+let canvas: CanvasManager
+
 const defaultConfig = {
   grid: {
     sizeWidth: 50,
@@ -16,23 +18,21 @@ const defaultConfig = {
     mode: 'simultaneous' as 'simultaneous' | 'sequential' | 'static',
     speed: 'normal' as 'very-fast' | 'fast' | 'normal' | 'slow',
     duration: 2000,
-    lineWidth: 2,
-    showEndCircles: true,
-    clearFirst: true
+    lineWidth: 2
   },
   paths: {
-    numberOfPaths: 12,
+    numberOfPaths: 12, // Sera mis à jour dynamiquement
     color: '#ff6b35',
     tronColor: '#00bfff'
-  },
-  rendering: {
-    gridColor: '#333333',
-    backgroundColor: '#000000'
   }
 }
 
-let currentConfig = { ...defaultConfig }
-let canvas: CanvasManager
+let currentConfig = {
+  grid: { ...defaultConfig.grid },
+  animation: { ...defaultConfig.animation },
+  paths: { ...defaultConfig.paths }
+}
+
 let isAnimating = false
 
 document.querySelector<HTMLDivElement>('#app')!.innerHTML = /*html*/`
@@ -55,7 +55,7 @@ document.querySelector<HTMLDivElement>('#app')!.innerHTML = /*html*/`
           </div>
           
           <!-- Bouton Principal d'Animation -->
-          <button id="launchAnimationBtn" class="w-full bg-gray-900 hover:bg-gray-800 text-white font-medium py-3 px-4 rounded-md transition-colors duration-200 disabled:bg-gray-400 disabled:cursor-not-allowed">
+          <button id="launchAnimationBtn" class="w-full bg-gray-900 hover:bg-gray-700 text-white font-medium py-3 px-4 rounded-md transition-colors duration-200 disabled:bg-gray-400 disabled:cursor-not-allowed">
             <span id="launchBtnText">Lancer l'Animation</span>
           </button>
           
@@ -97,18 +97,6 @@ document.querySelector<HTMLDivElement>('#app')!.innerHTML = /*html*/`
               <span id="lineWidthValue" class="text-xs bg-gray-100 px-2 py-1 rounded min-w-[40px] text-center font-mono">2px</span>
             </div>
           </div>
-          
-          <!-- Options d'Animation -->
-          <div class="space-y-2">
-            <div class="flex items-center space-x-2">
-              <input type="checkbox" id="showEndCircles" checked class="w-4 h-4 text-gray-600 border-gray-300 rounded focus:ring-gray-500">
-              <label for="showEndCircles" class="text-sm text-gray-700">Afficher cercles de fin</label>
-            </div>
-            <div class="flex items-center space-x-2">
-              <input type="checkbox" id="clearFirst" checked class="w-4 h-4 text-gray-600 border-gray-300 rounded focus:ring-gray-500">
-              <label for="clearFirst" class="text-sm text-gray-700">Nettoyer avant animation</label>
-            </div>
-          </div>
         </div>
         
         <!-- Section Chemins -->
@@ -121,7 +109,7 @@ document.querySelector<HTMLDivElement>('#app')!.innerHTML = /*html*/`
           <div class="space-y-2">
             <label class="text-sm font-medium text-gray-700">Nombre de Chemins</label>
             <div class="flex items-center space-x-3">
-              <input type="range" id="numberOfPaths" min="1" max="30" step="1" value="12" class="flex-1 slider">
+              <input type="range" id="numberOfPaths" min="1" max="50" step="1" value="12" class="flex-1 slider">
               <span id="pathCountValue" class="text-xs bg-gray-100 px-2 py-1 rounded min-w-[40px] text-center font-mono">12</span>
             </div>
           </div>
@@ -202,13 +190,7 @@ document.querySelector<HTMLDivElement>('#app')!.innerHTML = /*html*/`
           
           <!-- Actions Utilitaires -->
           <div class="grid grid-cols-1 gap-2">
-            <button id="showStatsBtn" class="bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium py-2 px-3 rounded-md text-sm transition-colors">
-              Statistiques
-            </button>
-            <button id="demonstrateSpeedsBtn" class="bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium py-2 px-3 rounded-md text-sm transition-colors">
-              Demo Vitesses
-            </button>
-            <button id="resetConfigBtn" class="bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium py-2 px-3 rounded-md text-sm transition-colors">
+            <button id="resetConfigBtn" class="bg-gray-900 hover:bg-gray-700 text-white font-medium py-2 px-3 rounded-md text-sm transition-colors">
               Reset Config
             </button>
           </div>
@@ -381,7 +363,7 @@ function launchAnimation(): void {
   // Effacer le canvas
   canvas.getRenderer().clear()
   
-  // Appliquer la nouvelle configuration
+  // Appliquer la nouvelle configuration à la grille
   canvas.initGrid(
     currentConfig.grid.sizeWidth,
     currentConfig.grid.sizeHeight,
@@ -390,8 +372,14 @@ function launchAnimation(): void {
     { x: currentConfig.grid.centerX, y: currentConfig.grid.centerY }
   )
   
-  // Régénérer les chemins
+  // FORCER la régénération aléatoire des chemins à chaque lancement
+  canvas.clearRandomPaths()
   canvas.setRandomPaths(currentConfig.paths.numberOfPaths)
+  
+  // Afficher la grille si demandé (avant l'animation)
+  if (currentConfig.grid.visible) {
+    canvas.drawGrid(true)
+  }
   
   updateStatus('Lancement de l\'animation...')
   
@@ -405,21 +393,21 @@ function launchAnimation(): void {
     updateStatus('Animation terminée - Prêt pour une nouvelle animation')
   }
   
-  // Lancer l'animation selon le mode sélectionné
+  // Lancer l'animation selon le mode sélectionné avec les couleurs de la config
   switch (currentConfig.animation.mode) {
     case 'simultaneous':
       switch (currentConfig.animation.speed) {
         case 'very-fast':
-          canvas.animateTronPathsVeryFast(currentConfig.animation.lineWidth, currentConfig.animation.clearFirst, onComplete)
+          canvas.animateTronPathsVeryFast(currentConfig.animation.lineWidth, true, onComplete)
           break
         case 'fast':
-          canvas.animateTronPathsFast(currentConfig.animation.lineWidth, currentConfig.animation.clearFirst, onComplete)
+          canvas.animateTronPathsFast(currentConfig.animation.lineWidth, true, onComplete)
           break
         case 'normal':
-          canvas.animateTronPathsNormal(currentConfig.animation.lineWidth, currentConfig.animation.clearFirst, onComplete)
+          canvas.animateTronPathsNormal(currentConfig.animation.lineWidth, true, onComplete)
           break
         case 'slow':
-          canvas.animateTronPathsSlow(currentConfig.animation.lineWidth, currentConfig.animation.clearFirst, onComplete)
+          canvas.animateTronPathsSlow(currentConfig.animation.lineWidth, true, onComplete)
           break
       }
       break
@@ -429,13 +417,13 @@ function launchAnimation(): void {
         currentConfig.animation.lineWidth,
         currentConfig.animation.duration / currentConfig.paths.numberOfPaths,
         100,
-        currentConfig.animation.clearFirst,
+        true,
         onComplete
       )
       break
     
     case 'static':
-      canvas.drawTronPaths(currentConfig.animation.lineWidth, currentConfig.animation.showEndCircles)
+      canvas.drawTronPaths(currentConfig.animation.lineWidth, true)
       onComplete()
       break
   }
@@ -444,6 +432,42 @@ function launchAnimation(): void {
   if (deadZone) {
     triggerTronLogoAnimation(deadZone)
   }
+}
+
+// Fonction pour calculer le nombre optimal de chemins
+function calculateOptimalPaths(): number {
+  if (!canvas) return 12
+  
+  // Réinitialiser temporairement la grille pour calculer
+  canvas.initGrid(
+    currentConfig.grid.sizeWidth,
+    currentConfig.grid.sizeHeight,
+    currentConfig.grid.deadZoneWidth,
+    currentConfig.grid.deadZoneHeight,
+    { x: currentConfig.grid.centerX, y: currentConfig.grid.centerY }
+  )
+  
+  const canvasBorderPoints = canvas.getGridManager().getCanvasBorderPoints()
+  const deadzoneBorderPoints = canvas.getGridManager().getDeadzoneBorderPoints()
+  
+  // Prendre le maximum entre les deux avec un minimum de 12
+  return Math.max(canvasBorderPoints.length, deadzoneBorderPoints.length, 12)
+}
+
+// Fonction pour mettre à jour les valeurs par défaut après initialisation
+function updateDefaultValues(): void {
+  const optimalPathCount = calculateOptimalPaths()
+  currentConfig.paths.numberOfPaths = optimalPathCount
+  
+  // Mettre à jour l'interface
+  const pathSlider = document.getElementById('numberOfPaths') as HTMLInputElement
+  const pathValue = document.getElementById('pathCountValue')!
+  
+  pathSlider.value = optimalPathCount.toString()
+  pathSlider.max = Math.max(optimalPathCount * 2, 50).toString()
+  pathValue.textContent = optimalPathCount.toString()
+  
+  updateStatus(`Prêt avec ${optimalPathCount} chemins optimaux`)
 }
 
 // Initialisation du canvas - NOIR au démarrage
@@ -456,7 +480,9 @@ canvas.initGrid(
   { x: currentConfig.grid.centerX, y: currentConfig.grid.centerY }
 )
 canvas.setupInteractivePathfinding()
-// PAS d'affichage initial - canvas reste noir
+
+// Calculer et appliquer les valeurs optimales après initialisation
+updateDefaultValues()
 
 // === EVENT LISTENERS ===
 
@@ -520,67 +546,49 @@ document.getElementById('showGrid')?.addEventListener('change', (e) => {
 document.getElementById('gridSizeWidth')?.addEventListener('input', (e) => {
   currentConfig.grid.sizeWidth = parseInt((e.target as HTMLInputElement).value)
   document.getElementById('gridWidthValue')!.textContent = `${currentConfig.grid.sizeWidth}`
-  updateStatus('Configuration mise à jour')
+  // Recalculer les chemins optimaux quand la grille change
+  updateDefaultValues()
 })
 
 // Taille grille hauteur
 document.getElementById('gridSizeHeight')?.addEventListener('input', (e) => {
   currentConfig.grid.sizeHeight = parseInt((e.target as HTMLInputElement).value)
   document.getElementById('gridHeightValue')!.textContent = `${currentConfig.grid.sizeHeight}`
-  updateStatus('Configuration mise à jour')
+  // Recalculer les chemins optimaux quand la grille change
+  updateDefaultValues()
 })
 
 // Dead zone largeur
 document.getElementById('deadZoneWidth')?.addEventListener('input', (e) => {
   currentConfig.grid.deadZoneWidth = parseInt((e.target as HTMLInputElement).value)
   document.getElementById('deadZoneWidthValue')!.textContent = `${currentConfig.grid.deadZoneWidth}`
-  updateStatus('Configuration mise à jour')
+  // Recalculer les chemins optimaux quand la deadzone change
+  updateDefaultValues()
 })
 
 // Dead zone hauteur
 document.getElementById('deadZoneHeight')?.addEventListener('input', (e) => {
   currentConfig.grid.deadZoneHeight = parseInt((e.target as HTMLInputElement).value)
   document.getElementById('deadZoneHeightValue')!.textContent = `${currentConfig.grid.deadZoneHeight}`
-  updateStatus('Configuration mise à jour')
+  // Recalculer les chemins optimaux quand la deadzone change
+  updateDefaultValues()
 })
 
-// Options d'animation
-document.getElementById('showEndCircles')?.addEventListener('change', (e) => {
-  currentConfig.animation.showEndCircles = (e.target as HTMLInputElement).checked
-  updateStatus('Configuration mise à jour')
-})
-
-document.getElementById('clearFirst')?.addEventListener('change', (e) => {
-  currentConfig.animation.clearFirst = (e.target as HTMLInputElement).checked
-  updateStatus('Configuration mise à jour')
-})
-
-// Utilitaires
-document.getElementById('showStatsBtn')?.addEventListener('click', () => {
-  const stats = canvas.getRandomPathsStats()
-  alert(`Statistiques:\n\nNombre de chemins: ${stats.totalPaths}\nPoints deadzone disponibles: ${stats.deadzonePointsAvailable}\nPoints canvas disponibles: ${stats.canvasPointsAvailable}`)
-})
-
-document.getElementById('demonstrateSpeedsBtn')?.addEventListener('click', () => {
-  if (!isAnimating) {
-    canvas.demonstrateAnimationSpeeds()
-  }
-})
-
+// Reset config
 document.getElementById('resetConfigBtn')?.addEventListener('click', () => {
-  currentConfig = {
-    grid: { ...defaultConfig.grid },
-    animation: { ...defaultConfig.animation },
-    paths: { ...defaultConfig.paths },
-    rendering: { ...defaultConfig.rendering }
-  }
+  // Remettre les valeurs par défaut
+  currentConfig.grid = { ...defaultConfig.grid }
+  currentConfig.animation = { ...defaultConfig.animation }
+  currentConfig.paths = { ...defaultConfig.paths }
+  
+  // Recalculer les optimaux et mettre à jour l'interface
+  updateDefaultValues()
   
   // Mettre à jour tous les contrôles
   (document.getElementById('animationMode') as HTMLSelectElement).value = currentConfig.animation.mode;
   (document.getElementById('animationSpeed') as HTMLSelectElement).value = currentConfig.animation.speed;
   (document.getElementById('animationDuration') as HTMLInputElement).value = currentConfig.animation.duration.toString();
   (document.getElementById('lineWidth') as HTMLInputElement).value = currentConfig.animation.lineWidth.toString();
-  (document.getElementById('numberOfPaths') as HTMLInputElement).value = currentConfig.paths.numberOfPaths.toString();
   (document.getElementById('pathColor') as HTMLInputElement).value = currentConfig.paths.color;
   (document.getElementById('tronColor') as HTMLInputElement).value = currentConfig.paths.tronColor;
   (document.getElementById('showGrid') as HTMLInputElement).checked = currentConfig.grid.visible;
@@ -588,13 +596,10 @@ document.getElementById('resetConfigBtn')?.addEventListener('click', () => {
   (document.getElementById('gridSizeHeight') as HTMLInputElement).value = currentConfig.grid.sizeHeight.toString();
   (document.getElementById('deadZoneWidth') as HTMLInputElement).value = currentConfig.grid.deadZoneWidth.toString();
   (document.getElementById('deadZoneHeight') as HTMLInputElement).value = currentConfig.grid.deadZoneHeight.toString();
-  (document.getElementById('showEndCircles') as HTMLInputElement).checked = currentConfig.animation.showEndCircles;
-  (document.getElementById('clearFirst') as HTMLInputElement).checked = currentConfig.animation.clearFirst;
   
   // Mettre à jour les valeurs affichées
   document.getElementById('durationValue')!.textContent = `${currentConfig.animation.duration}ms`;
   document.getElementById('lineWidthValue')!.textContent = `${currentConfig.animation.lineWidth}px`;
-  document.getElementById('pathCountValue')!.textContent = `${currentConfig.paths.numberOfPaths}`;
   document.getElementById('gridWidthValue')!.textContent = `${currentConfig.grid.sizeWidth}`;
   document.getElementById('gridHeightValue')!.textContent = `${currentConfig.grid.sizeHeight}`;
   document.getElementById('deadZoneWidthValue')!.textContent = `${currentConfig.grid.deadZoneWidth}`;
