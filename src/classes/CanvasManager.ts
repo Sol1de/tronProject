@@ -219,8 +219,8 @@ export default class CanvasManager {
   /**
    * Dessine tous les chemins avec le style Tron bleu néon
    */
-  public drawTronPaths(lineWidth: number = 2): void {
-    this.renderer.drawTronPaths(this.randomPaths, lineWidth)
+  public drawTronPaths(lineWidth: number = 2, showEndCircles: boolean = true): void {
+    this.renderer.drawTronPaths(this.randomPaths, lineWidth, showEndCircles)
   }
 
   /**
@@ -228,15 +228,111 @@ export default class CanvasManager {
    */
   public animateTronPaths(
     lineWidth: number = 2, 
-    animationSpeed: number = 50, 
+    durationMs: number = 2000, // Durée totale en millisecondes
     clearFirst: boolean = true,
     onComplete?: () => void
   ): void {
-    if (clearFirst) {
-      this.redraw()
+    if (this.randomPaths.length === 0) {
+      onComplete?.()
+      return
     }
-    
-    this.renderer.animateTronPaths(this.randomPaths, lineWidth, animationSpeed, onComplete)
+
+    // Animation fluide à 60 FPS avec effacement automatique
+    const startTime = performance.now()
+    const showGrid = this.showGrid
+
+    const animateFrame = (currentTime: number) => {
+      const elapsedTime = currentTime - startTime
+      const progress = Math.min(elapsedTime / durationMs, 1.0)
+
+      // Effacer et redessiner la grille à chaque frame
+      if (clearFirst) {
+        this.redraw(showGrid)
+      }
+
+      // Dessiner les chemins avec le progrès actuel
+      this.renderer.save()
+      this.renderer.setLineWidth(lineWidth)
+      
+      // Dessiner chaque chemin partiellement
+      this.randomPaths.forEach(randomPath => {
+        if (randomPath.path && randomPath.path.length >= 2) {
+          const reversedPath = [...randomPath.path].reverse()
+          this.renderer.drawTronPathPartial(reversedPath, progress, lineWidth)
+        }
+      })
+      
+      this.renderer.restore()
+
+      if (progress < 1.0) {
+        requestAnimationFrame(animateFrame)
+      } else {
+        onComplete?.()
+      }
+    }
+
+    requestAnimationFrame(animateFrame)
+  }
+
+  /**
+   * Anime les chemins Tron avec une durée totale spécifiée
+   */
+  public animateTronPathsWithDuration(
+    totalDurationMs: number,
+    lineWidth: number = 2,
+    clearFirst: boolean = true,
+    onComplete?: () => void
+  ): void {
+    console.log(`🎬 Animation fluide avec durée: ${totalDurationMs}ms`)
+    this.animateTronPaths(lineWidth, totalDurationMs, clearFirst, onComplete)
+  }
+
+  /**
+   * Animation Tron LENTE (durée longue)
+   */
+  public animateTronPathsSlow(
+    lineWidth: number = 2,
+    clearFirst: boolean = true,
+    onComplete?: () => void
+  ): void {
+    console.log('🐌 Animation Tron LENTE')
+    this.animateTronPaths(lineWidth, 4000, clearFirst, onComplete) // 4 secondes
+  }
+
+  /**
+   * Animation Tron NORMALE
+   */
+  public animateTronPathsNormal(
+    lineWidth: number = 2,
+    clearFirst: boolean = true,
+    onComplete?: () => void
+  ): void {
+    console.log('🚶 Animation Tron NORMALE')
+    this.animateTronPaths(lineWidth, 2500, clearFirst, onComplete) // 2.5 secondes
+  }
+
+  /**
+   * Animation Tron RAPIDE
+   */
+  public animateTronPathsFast(
+    lineWidth: number = 2,
+    clearFirst: boolean = true,
+    onComplete?: () => void
+  ): void {
+    console.log('🚀 Animation Tron RAPIDE')
+    this.animateTronPaths(lineWidth, 1500, clearFirst, onComplete) // 1.5 secondes
+  }
+
+  /**
+   * Animation Tron TRÈS RAPIDE
+   */
+  public animateTronPathsVeryFast(
+    lineWidth: number = 2,
+    clearFirst: boolean = true,
+    onComplete?: () => void
+  ): void {
+    console.log('⚡ Animation Tron TRÈS RAPIDE')
+    this.animateTronPaths(lineWidth, 800, clearFirst, onComplete) // 0.8 secondes
   }
 
   /**
@@ -245,7 +341,7 @@ export default class CanvasManager {
   public animateTronPath(
     pathIndex: number,
     lineWidth: number = 2,
-    animationSpeed: number = 50,
+    durationMs: number = 2000,
     clearFirst: boolean = true,
     onComplete?: () => void
   ): void {
@@ -262,19 +358,41 @@ export default class CanvasManager {
       return
     }
 
-    if (clearFirst) {
-      this.redraw()
+    // Animation fluide du chemin individuel
+    const startTime = performance.now()
+    const showGrid = this.showGrid
+    const reversedPath = [...path].reverse()
+
+    const animateFrame = (currentTime: number) => {
+      const elapsedTime = currentTime - startTime
+      const progress = Math.min(elapsedTime / durationMs, 1.0)
+
+      // Effacer et redessiner la grille à chaque frame
+      if (clearFirst) {
+        this.redraw(showGrid)
+      }
+
+      // Dessiner le chemin avec le progrès actuel
+      this.renderer.save()
+      this.renderer.drawTronPathPartial(reversedPath, progress, lineWidth)
+      this.renderer.restore()
+
+      if (progress < 1.0) {
+        requestAnimationFrame(animateFrame)
+      } else {
+        onComplete?.()
+      }
     }
 
-    this.renderer.animateTronPath(path, pathIndex, lineWidth, animationSpeed, onComplete)
+    requestAnimationFrame(animateFrame)
   }
 
   /**
    * Redessine le canvas avec les chemins en style Tron
    */
-  public redrawWithTron(showGrid?: boolean, lineWidth: number = 2): void {
+  public redrawWithTron(showGrid?: boolean, lineWidth: number = 2, showEndCircles: boolean = true): void {
     this.redraw(showGrid)
-    this.drawTronPaths(lineWidth)
+    this.drawTronPaths(lineWidth, showEndCircles)
   }
 
   /**
@@ -282,8 +400,8 @@ export default class CanvasManager {
    */
   public animateTronPathsSequentially(
     lineWidth: number = 2,
-    animationSpeed: number = 50,
-    pathDelay: number = 200, // délai entre chaque chemin
+    pathDurationMs: number = 1500,
+    pathDelayMs: number = 200,
     clearFirst: boolean = true,
     onComplete?: () => void
   ): void {
@@ -292,33 +410,62 @@ export default class CanvasManager {
       return
     }
 
-    if (clearFirst) {
-      this.redraw()
-    }
-
+    const validPaths = this.randomPaths.filter(rp => rp.path && rp.path.length >= 2)
     let currentPathIndex = 0
+    const completedPaths: Array<{path: Point[], index: number}> = [] // Garder trace des chemins terminés
 
     const animateNextPath = () => {
-      if (currentPathIndex >= this.randomPaths.length) {
+      if (currentPathIndex >= validPaths.length) {
         onComplete?.()
         return
       }
 
-      const path = this.randomPaths[currentPathIndex].path
-      if (path) {
-        this.renderer.animateTronPath(
-          path, 
-          currentPathIndex, 
-          lineWidth, 
-          animationSpeed, 
-          () => {
-            currentPathIndex++
-            setTimeout(animateNextPath, pathDelay)
+      const currentPath = validPaths[currentPathIndex]
+      const pathInOriginalArray = this.randomPaths.indexOf(currentPath)
+
+      if (currentPath.path) {
+        // Animation fluide du chemin courant avec gestion des chemins précédents
+        const startTime = performance.now()
+        const showGrid = this.showGrid
+        const reversedPath = [...currentPath.path].reverse()
+
+        const animateFrame = (currentTime: number) => {
+          const elapsedTime = currentTime - startTime
+          const progress = Math.min(elapsedTime / pathDurationMs, 1.0)
+
+          // Effacer et redessiner la grille à chaque frame
+          if (clearFirst) {
+            this.redraw(showGrid)
           }
-        )
+
+          // Redessiner tous les chemins déjà terminés avec leurs cercles
+          this.renderer.save()
+          completedPaths.forEach(completedPath => {
+            this.renderer.drawTronPathPartial(completedPath.path, 1.0, lineWidth, true)
+          })
+
+          // Dessiner le chemin en cours d'animation
+          this.renderer.drawTronPathPartial(reversedPath, progress, lineWidth, true)
+          this.renderer.restore()
+
+          if (progress < 1.0) {
+            requestAnimationFrame(animateFrame)
+          } else {
+            // Ajouter ce chemin aux chemins terminés
+            completedPaths.push({
+              path: reversedPath,
+              index: pathInOriginalArray
+            })
+            
+            currentPathIndex++
+            setTimeout(animateNextPath, pathDelayMs)
+          }
+        }
+
+        requestAnimationFrame(animateFrame)
       } else {
         currentPathIndex++
-        setTimeout(animateNextPath, pathDelay)
+        setTimeout(animateNextPath, pathDelayMs)
       }
     }
 
@@ -441,7 +588,7 @@ export default class CanvasManager {
    * Démontre comment utiliser les animations et le style Tron
    */
   public demonstrateTronFeatures(): void {
-    console.log('🚀 Démonstration des fonctionnalités Tron')
+    console.log('🚀 Démonstration des fonctionnalités Tron fluides')
     
     // 1. Toujours générer de nouveaux chemins pour la démo
     console.log('🔄 Génération de nouveaux chemins...')
@@ -454,21 +601,21 @@ export default class CanvasManager {
 
     // 3. Exemple 1: Animation de tous les chemins simultanément
     setTimeout(() => {
-      console.log('🎬 Animation simultanée de tous les chemins')
-      this.animateTronPaths(2, 30, true, () => {
+      console.log('🎬 Animation simultanée fluide de tous les chemins')
+      this.animateTronPathsNormal(2, true, () => {
         console.log('✅ Animation simultanée terminée')
         
         // 4. Exemple 2: Animation séquentielle après un délai
         setTimeout(() => {
-          console.log('🎬 Animation séquentielle des chemins')
-          this.animateTronPathsSequentially(2, 40, 300, true, () => {
+          console.log('🎬 Animation séquentielle fluide des chemins')
+          this.animateTronPathsSequentially(2, 1200, 300, true, () => {
             console.log('✅ Animation séquentielle terminée')
             
             // 5. Exemple 3: Affichage statique Tron après un délai
             setTimeout(() => {
-              console.log('🎨 Affichage statique style Tron')
-              this.redrawWithTron(true, 2)
-              console.log('✅ Style Tron appliqué')
+              console.log('🎨 Affichage statique style Tron avec cercles')
+              this.redrawWithTron(true, 2, true)
+              console.log('✅ Style Tron appliqué avec cercles de fin')
             }, 2000)
           })
         }, 2000)
@@ -479,7 +626,7 @@ export default class CanvasManager {
   /**
    * Méthode utilitaire pour tester une animation spécifique
    */
-  public testTronAnimation(mode: 'simultaneous' | 'sequential' | 'static' = 'simultaneous'): void {
+  public testTronAnimation(mode: 'simultaneous' | 'sequential' | 'static' | 'slow' | 'normal' | 'fast' | 'very-fast' = 'simultaneous'): void {
     // TOUJOURS générer de nouveaux chemins à chaque test
     console.log('🔄 Génération de nouveaux chemins pour le test...')
     this.setRandomPaths()
@@ -487,24 +634,98 @@ export default class CanvasManager {
 
     switch (mode) {
       case 'simultaneous':
-        console.log('🎬 Test: Animation simultanée')
-        this.animateTronPaths(2, 50, true, () => {
+        console.log('🎬 Test: Animation simultanée fluide (normale)')
+        this.animateTronPathsNormal(2, true, () => {
           console.log('✅ Test animation simultanée terminé')
         })
         break
         
       case 'sequential':
-        console.log('🎬 Test: Animation séquentielle')
-        this.animateTronPathsSequentially(2, 60, 250, true, () => {
+        console.log('🎬 Test: Animation séquentielle fluide')
+        this.animateTronPathsSequentially(2, 1200, 250, true, () => {
           console.log('✅ Test animation séquentielle terminé')
         })
         break
         
       case 'static':
-        console.log('🎨 Test: Affichage statique Tron')
-        this.redrawWithTron(true, 2)
-        console.log('✅ Test affichage statique terminé')
+        console.log('🎨 Test: Affichage statique Tron avec cercles')
+        this.redrawWithTron(true, 2, true)
+        console.log('✅ Test affichage statique avec cercles terminé')
+        break
+
+      case 'slow':
+        console.log('🎬 Test: Animation fluide LENTE')
+        this.animateTronPathsSlow(2, true, () => {
+          console.log('✅ Test animation lente terminé')
+        })
+        break
+
+      case 'normal':
+        console.log('🎬 Test: Animation fluide NORMALE')
+        this.animateTronPathsNormal(2, true, () => {
+          console.log('✅ Test animation normale terminé')
+        })
+        break
+
+      case 'fast':
+        console.log('🎬 Test: Animation fluide RAPIDE')
+        this.animateTronPathsFast(2, true, () => {
+          console.log('✅ Test animation rapide terminé')
+        })
+        break
+
+      case 'very-fast':
+        console.log('🎬 Test: Animation fluide TRÈS RAPIDE')
+        this.animateTronPathsVeryFast(2, true, () => {
+          console.log('✅ Test animation très rapide terminé')
+        })
         break
     }
+  }
+
+  /**
+   * Test avec durée personnalisée (en millisecondes)
+   */
+  public testTronAnimationWithDuration(durationMs: number): void {
+    console.log('🔄 Génération de nouveaux chemins pour le test...')
+    this.setRandomPaths()
+    console.log(`🎬 Test: Animation fluide avec durée personnalisée (${durationMs}ms)`)
+    
+    this.animateTronPathsWithDuration(durationMs, 2, true, () => {
+      console.log('✅ Test animation personnalisée terminé')
+    })
+  }
+
+  /**
+   * Démo des différentes vitesses d'animation fluide
+   */
+  public demonstrateAnimationSpeeds(): void {
+    console.log('🚀 Démonstration des différentes vitesses d\'animation fluide')
+    
+    // Générer de nouveaux chemins
+    this.setRandomPaths()
+    
+    // Séquence de démonstration des vitesses
+    setTimeout(() => {
+      console.log('1️⃣ Animation fluide TRÈS RAPIDE...')
+      this.animateTronPathsVeryFast(2, true, () => {
+        setTimeout(() => {
+          console.log('2️⃣ Animation fluide RAPIDE...')
+          this.animateTronPathsFast(2, true, () => {
+            setTimeout(() => {
+              console.log('3️⃣ Animation fluide NORMALE...')
+              this.animateTronPathsNormal(2, true, () => {
+                setTimeout(() => {
+                  console.log('4️⃣ Animation fluide LENTE...')
+                  this.animateTronPathsSlow(2, true, () => {
+                    console.log('✅ Démonstration des vitesses terminée')
+                  })
+                }, 1000)
+              })
+            }, 1000)
+          })
+        }, 1000)
+      })
+    }, 500)
   }
 } 
