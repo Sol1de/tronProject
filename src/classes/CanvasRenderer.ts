@@ -272,7 +272,7 @@ export default class CanvasRenderer {
   }
 
   /**
-   * Dessine plusieurs chemins avec un style Tron bleu néon
+   * Dessine tous les chemins avec style Tron et cercles de fin (en évitant les intersections)
    */
   public drawTronPaths(randomPaths: RandomPath[], lineWidth: number = 2, showEndCircles: boolean = true): void {
     // Sauvegarder l'état actuel du contexte
@@ -282,18 +282,30 @@ export default class CanvasRenderer {
     this.context.lineCap = 'round'
     this.context.lineJoin = 'round'
     
-    randomPaths.forEach((randomPath) => {
+    let circlesSkipped = 0
+    
+    randomPaths.forEach((randomPath, index) => {
       if (randomPath.path) {
         this.drawTronPath(randomPath.path, lineWidth)
         
-        // Ajouter le cercle à la fin du chemin si demandé
+        // Ajouter le cercle à la fin du chemin si demandé et si pas d'intersection
         if (showEndCircles) {
           // Le premier point du chemin original est le point final (dans la deadzone)
-          const endPoint = randomPath.path[0]  
-          this.drawTronEndCircle(endPoint, 6)
+          const endPoint = randomPath.path[0]
+          
+          // Vérifier si ce point final est sur une intersection
+          if (!this.isEndPointOnIntersection(index, endPoint, randomPaths)) {
+            this.drawTronEndCircle(endPoint, 6)
+          } else {
+            circlesSkipped++
+          }
         }
       }
     })
+    
+    if (circlesSkipped > 0) {
+      console.log(`🚫 ${circlesSkipped} cercles supprimés pour intersections (affichage statique)`)
+    }
     
     // Restaurer l'état du contexte
     this.context.restore()
@@ -629,5 +641,28 @@ export default class CanvasRenderer {
     }
 
     requestAnimationFrame(animateFrame)
+  }
+
+  /**
+   * Vérifie si un point final de chemin intersecte avec un autre chemin existant
+   */
+  private isEndPointOnIntersection(pathIndex: number, endPoint: Point, allPaths: RandomPath[]): boolean {
+    // Vérifier contre tous les autres chemins
+    for (let i = 0; i < allPaths.length; i++) {
+      if (i === pathIndex) continue // Ignorer le chemin lui-même
+      
+      const otherPath = allPaths[i].path
+      if (!otherPath || otherPath.length < 2) continue
+      
+      // Vérifier si le point final intersecte avec un point du milieu de l'autre chemin
+      // (exclure le premier et dernier point de l'autre chemin)
+      for (let j = 1; j < otherPath.length - 1; j++) {
+        const otherPoint = otherPath[j]
+        if (Math.abs(endPoint.x - otherPoint.x) < 1 && Math.abs(endPoint.y - otherPoint.y) < 1) {
+          return true // Intersection détectée
+        }
+      }
+    }
+    return false
   }
 } 

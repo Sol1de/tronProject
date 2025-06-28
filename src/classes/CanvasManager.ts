@@ -270,12 +270,13 @@ export default class CanvasManager {
         requestAnimationFrame(animateFrame)
       } else {
         // Tous les chemins sont terminés, maintenant animer tous les cercles simultanément
-        const endPoints = this.randomPaths
-          .filter(rp => rp.path && rp.path.length >= 2)
-          .map(rp => rp.path![0])  // Premier point = point final dans la deadzone
+        // Mais seulement pour les chemins qui ne se terminent pas sur des intersections
+        const validPathsForCircles = this.getPathsWithValidEndCircles()
+        const endPoints = validPathsForCircles.map(validPath => validPath.path[0]) // Premier point = point final dans la deadzone
         
         if (endPoints.length > 0) {
-          // Animer tous les cercles en parallèle
+          console.log(`🎯 Animation de ${endPoints.length} cercles (${this.randomPaths.length - endPoints.length} supprimés pour intersections)`)
+          // Animer tous les cercles valides en parallèle
           Promise.all(endPoints.map(endPoint => 
             this.animateEndCircle(endPoint, 300, 6)  // Rayon 6 pixels
           )).then(() => {
@@ -400,13 +401,22 @@ export default class CanvasManager {
       if (progress < 1.0) {
         requestAnimationFrame(animateFrame)
       } else {
-        // Animation du chemin terminée, maintenant animer le cercle avec délai et fondu
+        // Animation du chemin terminée, maintenant vérifier si on doit animer le cercle
         const endPoint = reversedPath[reversedPath.length - 1]
-        this.animateEndCircle(endPoint, 300, 6).then(() => {
+        
+        // Vérifier si ce point final est sur une intersection
+        if (!this.isEndPointOnIntersection(pathIndex, endPoint)) {
+          this.animateEndCircle(endPoint, 300, 6).then(() => {  // Rayon 6 pixels
+            if (onComplete) {
+              onComplete()
+            }
+          })
+        } else {
+          console.log(`🚫 Cercle supprimé pour intersection (chemin individuel ${pathIndex + 1})`)
           if (onComplete) {
             onComplete()
           }
-        })
+        }
       }
     }
 
@@ -489,18 +499,25 @@ export default class CanvasManager {
               index: pathInOriginalArray
             })
             
-            // Animer le cercle avec délai et fondu
+            // Vérifier si on doit animer le cercle (pas d'intersection)
             const endPoint = reversedPath[reversedPath.length - 1]
-            this.animateEndCircle(endPoint, 300, 6).then(() => {
-              // Ajouter le cercle aux cercles terminés
-              completedCircles.push({
-                endPoint: endPoint,
-                radius: 6
+            if (!this.isEndPointOnIntersection(pathInOriginalArray, endPoint)) {
+              // Animer le cercle avec délai et fondu
+              this.animateEndCircle(endPoint, 300, 6).then(() => {  // Rayon 6 pixels
+                // Ajouter le cercle aux cercles terminés
+                completedCircles.push({
+                  endPoint: endPoint,
+                  radius: 6
+                })
+                
+                currentPathIndex++
+                setTimeout(animateNextPath, pathDelayMs)
               })
-              
+            } else {
+              console.log(`🚫 Cercle supprimé pour intersection (séquentiel ${pathInOriginalArray + 1})`)
               currentPathIndex++
               setTimeout(animateNextPath, pathDelayMs)
-            })
+            }
           }
         }
 
@@ -820,5 +837,53 @@ export default class CanvasManager {
         console.log(`  - Cercle devrait être à: (${startPoint.x}, ${startPoint.y})`)
       }
     })
+  }
+
+  /**
+   * Vérifie si un point final de chemin intersecte avec un autre chemin existant
+   */
+  private isEndPointOnIntersection(pathIndex: number, endPoint: Point): boolean {
+    // Vérifier contre tous les autres chemins
+    for (let i = 0; i < this.randomPaths.length; i++) {
+      if (i === pathIndex) continue // Ignorer le chemin lui-même
+      
+      const otherPath = this.randomPaths[i].path
+      if (!otherPath || otherPath.length < 2) continue
+      
+      // Vérifier si le point final intersecte avec un point du milieu de l'autre chemin
+      // (exclure le premier et dernier point de l'autre chemin)
+      for (let j = 1; j < otherPath.length - 1; j++) {
+        const otherPoint = otherPath[j]
+        if (Math.abs(endPoint.x - otherPoint.x) < 1 && Math.abs(endPoint.y - otherPoint.y) < 1) {
+          return true // Intersection détectée
+        }
+      }
+    }
+    return false
+  }
+
+  /**
+   * Obtient la liste des chemins qui peuvent avoir des cercles (sans intersections)
+   */
+  private getPathsWithValidEndCircles(): Array<{path: Point[], index: number}> {
+    const validPaths: Array<{path: Point[], index: number}> = []
+    
+    this.randomPaths.forEach((randomPath, index) => {
+      if (randomPath.path && randomPath.path.length >= 2) {
+        const endPoint = randomPath.path[0] // Premier point = point final dans la deadzone
+        
+        // Vérifier si ce point final est sur une intersection
+        if (!this.isEndPointOnIntersection(index, endPoint)) {
+          validPaths.push({
+            path: randomPath.path,
+            index: index
+          })
+        } else {
+          console.log(`🚫 Cercle supprimé pour le chemin ${index + 1} (intersection détectée)`)
+        }
+      }
+    })
+    
+    return validPaths
   }
 } 
