@@ -132,22 +132,20 @@ export default class CanvasManager {
    * Calcule le nombre optimal de chemins selon l'espace disponible
    */
   private calculateOptimalPathCount(): number {
-    const allPoints = this.gridManager.getGridPoints()
-    const deadZone = this.gridManager.getDeadZone()
+    const canvasBorderPoints = this.gridManager.getCanvasBorderPoints()
+    const deadzoneBorderPoints = this.gridManager.getDeadzoneBorderPoints()
     
-    const availablePoints = deadZone ? 
-      allPoints.filter(p => !this.gridManager.isPointInDeadZone(p.x, p.y, deadZone)) :
-      allPoints
-
-    // Estimation basée sur la densité optimale
-    const canvasArea = this.width * this.height
-    const gridDensity = availablePoints.length / canvasArea
+    // Utiliser le maximum possible basé sur les points de bordure disponibles
+    // C'est plus proche de l'ancien comportement qui générait beaucoup de paths
+    const maxFromCanvasBorder = canvasBorderPoints.length
+    const maxFromDeadzoneBorder = deadzoneBorderPoints.length
     
-    // Formule optimisée pour maximiser la couverture sans sur-densité
-    const baseCount = Math.floor(Math.sqrt(availablePoints.length) * 1.2)
-    const densityAdjustment = Math.floor(gridDensity * canvasArea * 0.0001)
+    // Prendre le maximum entre les deux, avec un minimum de 12 chemins
+    const optimalCount = Math.max(maxFromCanvasBorder, maxFromDeadzoneBorder, 12)
     
-    return Math.max(baseCount + densityAdjustment, 8) // Minimum 8 chemins
+    console.log(`📊 Calcul optimal: ${optimalCount} chemins (bordure canvas: ${maxFromCanvasBorder}, bordure deadzone: ${maxFromDeadzoneBorder})`)
+    
+    return optimalCount
   }
 
   /**
@@ -216,6 +214,115 @@ export default class CanvasManager {
    */
   public drawRandomPaths(strokeStyle: string = 'orange', lineWidth: number = 2): void {
     this.renderer.drawRandomPaths(this.randomPaths, strokeStyle, lineWidth)
+  }
+
+  /**
+   * Dessine tous les chemins avec le style Tron bleu néon
+   */
+  public drawTronPaths(lineWidth: number = 2): void {
+    this.renderer.drawTronPaths(this.randomPaths, lineWidth)
+  }
+
+  /**
+   * Anime tous les chemins avec le style Tron de manière progressive
+   */
+  public animateTronPaths(
+    lineWidth: number = 2, 
+    animationSpeed: number = 50, 
+    clearFirst: boolean = true,
+    onComplete?: () => void
+  ): void {
+    if (clearFirst) {
+      this.redraw()
+    }
+    
+    this.renderer.animateTronPaths(this.randomPaths, lineWidth, animationSpeed, onComplete)
+  }
+
+  /**
+   * Anime un seul chemin Tron
+   */
+  public animateTronPath(
+    pathIndex: number,
+    lineWidth: number = 2,
+    animationSpeed: number = 50,
+    clearFirst: boolean = true,
+    onComplete?: () => void
+  ): void {
+    if (pathIndex < 0 || pathIndex >= this.randomPaths.length) {
+      console.warn('Index de chemin invalide:', pathIndex)
+      onComplete?.()
+      return
+    }
+
+    const path = this.randomPaths[pathIndex].path
+    if (!path) {
+      console.warn('Chemin inexistant à l\'index:', pathIndex)
+      onComplete?.()
+      return
+    }
+
+    if (clearFirst) {
+      this.redraw()
+    }
+
+    this.renderer.animateTronPath(path, pathIndex, lineWidth, animationSpeed, onComplete)
+  }
+
+  /**
+   * Redessine le canvas avec les chemins en style Tron
+   */
+  public redrawWithTron(showGrid?: boolean, lineWidth: number = 2): void {
+    this.redraw(showGrid)
+    this.drawTronPaths(lineWidth)
+  }
+
+  /**
+   * Démarre l'animation Tron séquentielle (un chemin après l'autre)
+   */
+  public animateTronPathsSequentially(
+    lineWidth: number = 2,
+    animationSpeed: number = 50,
+    pathDelay: number = 200, // délai entre chaque chemin
+    clearFirst: boolean = true,
+    onComplete?: () => void
+  ): void {
+    if (this.randomPaths.length === 0) {
+      onComplete?.()
+      return
+    }
+
+    if (clearFirst) {
+      this.redraw()
+    }
+
+    let currentPathIndex = 0
+
+    const animateNextPath = () => {
+      if (currentPathIndex >= this.randomPaths.length) {
+        onComplete?.()
+        return
+      }
+
+      const path = this.randomPaths[currentPathIndex].path
+      if (path) {
+        this.renderer.animateTronPath(
+          path, 
+          currentPathIndex, 
+          lineWidth, 
+          animationSpeed, 
+          () => {
+            currentPathIndex++
+            setTimeout(animateNextPath, pathDelay)
+          }
+        )
+      } else {
+        currentPathIndex++
+        setTimeout(animateNextPath, pathDelay)
+      }
+    }
+
+    animateNextPath()
   }
 
   /**
@@ -327,5 +434,77 @@ export default class CanvasManager {
 
   public setGridVisible(visible: boolean): void {
     this.showGrid = visible
+  }
+
+  /**
+   * EXEMPLE D'UTILISATION des nouvelles fonctionnalités Tron
+   * Démontre comment utiliser les animations et le style Tron
+   */
+  public demonstrateTronFeatures(): void {
+    console.log('🚀 Démonstration des fonctionnalités Tron')
+    
+    // 1. Toujours générer de nouveaux chemins pour la démo
+    console.log('🔄 Génération de nouveaux chemins...')
+    this.setRandomPaths() // Génère de nouveaux paths à chaque fois
+    console.log('✅ Nouveaux chemins générés (nombre optimal)')
+
+    // 2. Effacer et redessiner la grille
+    this.redraw(true)
+    console.log('✅ Grille redessinée')
+
+    // 3. Exemple 1: Animation de tous les chemins simultanément
+    setTimeout(() => {
+      console.log('🎬 Animation simultanée de tous les chemins')
+      this.animateTronPaths(2, 30, true, () => {
+        console.log('✅ Animation simultanée terminée')
+        
+        // 4. Exemple 2: Animation séquentielle après un délai
+        setTimeout(() => {
+          console.log('🎬 Animation séquentielle des chemins')
+          this.animateTronPathsSequentially(2, 40, 300, true, () => {
+            console.log('✅ Animation séquentielle terminée')
+            
+            // 5. Exemple 3: Affichage statique Tron après un délai
+            setTimeout(() => {
+              console.log('🎨 Affichage statique style Tron')
+              this.redrawWithTron(true, 2)
+              console.log('✅ Style Tron appliqué')
+            }, 2000)
+          })
+        }, 2000)
+      })
+    }, 1000)
+  }
+
+  /**
+   * Méthode utilitaire pour tester une animation spécifique
+   */
+  public testTronAnimation(mode: 'simultaneous' | 'sequential' | 'static' = 'simultaneous'): void {
+    // TOUJOURS générer de nouveaux chemins à chaque test
+    console.log('🔄 Génération de nouveaux chemins pour le test...')
+    this.setRandomPaths()
+    console.log('✅ Nouveaux chemins générés')
+
+    switch (mode) {
+      case 'simultaneous':
+        console.log('🎬 Test: Animation simultanée')
+        this.animateTronPaths(2, 50, true, () => {
+          console.log('✅ Test animation simultanée terminé')
+        })
+        break
+        
+      case 'sequential':
+        console.log('🎬 Test: Animation séquentielle')
+        this.animateTronPathsSequentially(2, 60, 250, true, () => {
+          console.log('✅ Test animation séquentielle terminé')
+        })
+        break
+        
+      case 'static':
+        console.log('🎨 Test: Affichage statique Tron')
+        this.redrawWithTron(true, 2)
+        console.log('✅ Test affichage statique terminé')
+        break
+    }
   }
 } 

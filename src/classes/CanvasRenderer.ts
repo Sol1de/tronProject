@@ -236,8 +236,6 @@ export default class CanvasRenderer {
     }
   }
 
-
-
   /**
    * Sauvegarde l'état actuel du contexte
    */
@@ -271,5 +269,218 @@ export default class CanvasRenderer {
    */
   public setLineWidth(width: number): void {
     this.context.lineWidth = width
+  }
+
+  /**
+   * Dessine plusieurs chemins avec un style Tron bleu néon
+   */
+  public drawTronPaths(randomPaths: RandomPath[], lineWidth: number = 2): void {
+    // Sauvegarder l'état actuel du contexte
+    this.context.save()
+    
+    // Configuration du style Tron
+    this.context.lineCap = 'round'
+    this.context.lineJoin = 'round'
+    
+    randomPaths.forEach((randomPath, index) => {
+      if (randomPath.path) {
+        this.drawTronPath(randomPath.path, lineWidth, index)
+      }
+    })
+    
+    // Restaurer l'état du contexte
+    this.context.restore()
+  }
+
+  /**
+   * Dessine un chemin unique avec le style Tron bleu néon
+   */
+  private drawTronPath(path: Point[], lineWidth: number = 2, pathIndex: number = 0): void {
+    if (path.length < 2) return
+    
+    // Couleurs bleu néon Tron
+    const tronBlue = '#00FFFF'
+    const tronGlow = '#0080FF'
+    
+    // Effet de lueur (glow) - dessiner plusieurs couches
+    for (let layer = 0; layer < 3; layer++) {
+      this.context.beginPath()
+      this.context.moveTo(path[0].x, path[0].y)
+      
+      for (let i = 1; i < path.length; i++) {
+        this.context.lineTo(path[i].x, path[i].y)
+      }
+      
+      // Configuration selon la couche
+      switch (layer) {
+        case 0: // Couche extérieure (glow large)
+          this.context.strokeStyle = tronGlow
+          this.context.lineWidth = lineWidth + 4
+          this.context.globalAlpha = 0.1
+          this.context.shadowBlur = 15
+          this.context.shadowColor = tronBlue
+          break
+        case 1: // Couche moyenne (glow moyen)
+          this.context.strokeStyle = tronGlow
+          this.context.lineWidth = lineWidth + 2
+          this.context.globalAlpha = 0.3
+          this.context.shadowBlur = 8
+          this.context.shadowColor = tronBlue
+          break
+        case 2: // Couche intérieure (ligne principale)
+          this.context.strokeStyle = tronBlue
+          this.context.lineWidth = lineWidth
+          this.context.globalAlpha = 1.0
+          this.context.shadowBlur = 3
+          this.context.shadowColor = tronBlue
+          break
+      }
+      
+      this.context.stroke()
+    }
+    
+    // Numéro du chemin (sans les cercles de points)
+    const midPoint = path[Math.floor(path.length / 2)]
+    this.drawTronText(`${pathIndex + 1}`, midPoint.x + 12, midPoint.y - 12)
+  }
+
+  /**
+   * Dessine du texte avec style Tron
+   */
+  private drawTronText(text: string, x: number, y: number): void {
+    this.context.save()
+    
+    // Configuration du texte Tron
+    this.context.font = 'bold 12px monospace'
+    this.context.textAlign = 'center'
+    this.context.textBaseline = 'middle'
+    
+    // Effet de lueur sur le texte
+    this.context.strokeStyle = '#00FFFF'
+    this.context.lineWidth = 2
+    this.context.globalAlpha = 0.3
+    this.context.shadowBlur = 8
+    this.context.shadowColor = '#00FFFF'
+    this.context.strokeText(text, x, y)
+    
+    // Texte principal
+    this.context.fillStyle = '#FFFFFF'
+    this.context.globalAlpha = 1.0
+    this.context.shadowBlur = 4
+    this.context.shadowColor = '#00FFFF'
+    this.context.fillText(text, x, y)
+    
+    this.context.restore()
+  }
+
+  /**
+   * Anime les chemins Tron de manière progressive (de l'extérieur vers le centre)
+   */
+  public animateTronPaths(
+    randomPaths: RandomPath[], 
+    lineWidth: number = 2,
+    animationSpeed: number = 50, // millisecondes entre chaque segment
+    onComplete?: () => void
+  ): void {
+    if (randomPaths.length === 0) {
+      onComplete?.()
+      return
+    }
+
+    // État d'animation pour chaque chemin (avec direction inversée)
+    const animationStates = randomPaths.map(randomPath => ({
+      path: randomPath.path ? [...randomPath.path].reverse() : [], // INVERSION ICI
+      currentSegment: 0,
+      isComplete: false,
+      pathIndex: randomPaths.indexOf(randomPath)
+    }))
+
+    // Fonction d'animation récursive
+    const animateFrame = () => {
+      // Effacer et redessiner la grille si nécessaire
+      // (on suppose que cette méthode sera appelée après avoir effacé le canvas)
+      
+      let allComplete = true
+      
+      // Dessiner tous les segments animés jusqu'à présent
+      this.context.save()
+      this.context.lineCap = 'round'
+      this.context.lineJoin = 'round'
+      
+      animationStates.forEach(state => {
+        if (state.path.length < 2) return
+        
+        // Dessiner les segments jusqu'au segment actuel
+        if (state.currentSegment > 0) {
+          const segmentsToShow = Math.min(state.currentSegment, state.path.length - 1)
+          const pathSegment = state.path.slice(0, segmentsToShow + 1)
+          
+          if (pathSegment.length >= 2) {
+            this.drawTronPath(pathSegment, lineWidth, state.pathIndex)
+          }
+        }
+        
+        // Vérifier si ce chemin est terminé
+        if (state.currentSegment >= state.path.length - 1) {
+          state.isComplete = true
+        } else {
+          allComplete = false
+          state.currentSegment++
+        }
+      })
+      
+      this.context.restore()
+      
+      // Continuer l'animation si pas terminée
+      if (!allComplete) {
+        setTimeout(() => {
+          requestAnimationFrame(animateFrame)
+        }, animationSpeed)
+      } else {
+        onComplete?.()
+      }
+    }
+    
+    // Démarrer l'animation
+    requestAnimationFrame(animateFrame)
+  }
+
+  /**
+   * Anime un seul chemin Tron de manière progressive (de l'extérieur vers le centre)
+   */
+  public animateTronPath(
+    path: Point[], 
+    pathIndex: number = 0,
+    lineWidth: number = 2,
+    animationSpeed: number = 50,
+    onComplete?: () => void
+  ): void {
+    if (path.length < 2) {
+      onComplete?.()
+      return
+    }
+
+    // Inverser le chemin pour aller de l'extérieur vers le centre
+    const reversedPath = [...path].reverse()
+    let currentSegment = 0
+    
+    const animateSegment = () => {
+      if (currentSegment >= reversedPath.length - 1) {
+        onComplete?.()
+        return
+      }
+      
+      // Dessiner le segment jusqu'au point actuel
+      const pathSegment = reversedPath.slice(0, currentSegment + 2)
+      this.drawTronPath(pathSegment, lineWidth, pathIndex)
+      
+      currentSegment++
+      
+      setTimeout(() => {
+        requestAnimationFrame(animateSegment)
+      }, animationSpeed)
+    }
+    
+    requestAnimationFrame(animateSegment)
   }
 } 
