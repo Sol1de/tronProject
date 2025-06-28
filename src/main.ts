@@ -127,7 +127,7 @@ document.querySelector<HTMLDivElement>('#app')!.innerHTML = /*html*/`
           <div class="space-y-2">
             <label class="text-sm font-medium text-gray-700">Taille Grille (Largeur)</label>
             <div class="flex items-center space-x-3">
-              <input type="range" id="gridSizeWidth" min="20" max="100" step="5" value="50" class="flex-1 slider">
+              <input type="range" id="gridSizeWidth" min="40" max="100" step="5" value="50" class="flex-1 slider">
               <span id="gridWidthValue" class="text-xs bg-gray-100 px-2 py-1 rounded min-w-[40px] text-center font-mono">50</span>
             </div>
           </div>
@@ -136,7 +136,7 @@ document.querySelector<HTMLDivElement>('#app')!.innerHTML = /*html*/`
           <div class="space-y-2">
             <label class="text-sm font-medium text-gray-700">Taille Grille (Hauteur)</label>
             <div class="flex items-center space-x-3">
-              <input type="range" id="gridSizeHeight" min="20" max="100" step="5" value="50" class="flex-1 slider">
+              <input type="range" id="gridSizeHeight" min="40" max="100" step="5" value="50" class="flex-1 slider">
               <span id="gridHeightValue" class="text-xs bg-gray-100 px-2 py-1 rounded min-w-[40px] text-center font-mono">50</span>
             </div>
           </div>
