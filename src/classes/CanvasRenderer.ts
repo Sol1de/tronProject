@@ -290,7 +290,7 @@ export default class CanvasRenderer {
         if (showEndCircles) {
           // Le premier point du chemin original est le point final (dans la deadzone)
           const endPoint = randomPath.path[0]  
-          this.drawTronEndCircle(endPoint, 2)
+          this.drawTronEndCircle(endPoint, 6)
         }
       }
     })
@@ -362,9 +362,9 @@ export default class CanvasRenderer {
     const totalLength = this.calculatePathLength(path)
     let targetLength = totalLength * progress
     
-    // Raccourcir le chemin de 3 pixels pour éviter que le trait apparaisse dans le cercle (ajusté pour rayon 2px)
+    // Raccourcir le chemin de 7 pixels pour éviter que le trait apparaisse dans le cercle (ajusté pour rayon 6px)
     if (shortenEnd && progress >= 1.0) {
-      targetLength = Math.max(0, targetLength - 3)
+      targetLength = Math.max(0, targetLength - 7)
     }
     
     let currentLength = 0
@@ -471,24 +471,25 @@ export default class CanvasRenderer {
   }
 
   /**
-   * Dessine un cercle néon avec bordure et effet glow à la fin d'un chemin
+   * Dessine un cercle néon avec bordure nette de 1 pixel (sans glow)
    */
-  public drawTronEndCircle(point: Point, radius: number = 2, alpha: number = 1.0): void {
+  public drawTronEndCircle(point: Point, radius: number = 6, alpha: number = 1.0): void {
     this.context.save()
     
     // Utiliser la même couleur que les chemins (bleu néon Tron)
     const tronBlue = '#00FFFF'  // Même couleur que les paths
     
-    // Dessiner seulement la bordure principale avec un glow très léger
+    // Dessiner seulement la bordure nette sans aucun effet
     this.context.beginPath()
     this.context.arc(point.x, point.y, radius, 0, 2 * Math.PI)
     
-    // Bordure principale nette
+    // Bordure nette de 1 pixel - aucun effet
     this.context.strokeStyle = tronBlue
     this.context.lineWidth = 1
     this.context.globalAlpha = alpha
-    this.context.shadowBlur = 2  // Glow très léger
-    this.context.shadowColor = tronBlue
+    // Supprimer complètement les effets shadow/glow
+    this.context.shadowBlur = 0
+    this.context.shadowColor = 'transparent'
     
     // Dessiner uniquement la bordure (stroke, pas fill)
     this.context.stroke()
@@ -497,9 +498,9 @@ export default class CanvasRenderer {
   }
 
   /**
-   * Dessine un cercle partiellement (animation d'arc progressif)
+   * Dessine un cercle partiellement (animation d'arc progressif) avec bordure nette de 1 pixel
    */
-  public drawTronEndCirclePartial(point: Point, radius: number = 2, progress: number = 1.0): void {
+  public drawTronEndCirclePartial(point: Point, radius: number = 6, progress: number = 1.0): void {
     if (progress <= 0) return
     
     this.context.save()
@@ -510,17 +511,18 @@ export default class CanvasRenderer {
     // Calculer l'angle final basé sur le progrès (0 à 2π)
     const endAngle = progress * 2 * Math.PI
     
-    // Dessiner seulement la bordure principale avec glow très léger
+    // Dessiner seulement la bordure nette sans aucun effet
     this.context.beginPath()
     // Commencer à -π/2 (12h) et dessiner dans le sens horaire
     this.context.arc(point.x, point.y, radius, -Math.PI / 2, -Math.PI / 2 + endAngle)
     
-    // Bordure principale nette
+    // Bordure nette de 1 pixel - aucun effet
     this.context.strokeStyle = tronBlue
     this.context.lineWidth = 1
     this.context.globalAlpha = 1.0
-    this.context.shadowBlur = 2  // Glow très léger
-    this.context.shadowColor = tronBlue
+    // Supprimer complètement les effets shadow/glow
+    this.context.shadowBlur = 0
+    this.context.shadowColor = 'transparent'
     
     // Dessiner seulement l'arc
     this.context.stroke()

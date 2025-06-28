@@ -275,7 +275,7 @@ export default class CanvasManager {
         if (endPoints.length > 0) {
           // Animer tous les cercles en parallèle
           Promise.all(endPoints.map(endPoint => 
-            this.animateEndCircle(endPoint, 300, 2)  // Rayon 2 pixels
+            this.animateEndCircle(endPoint, 300, 6)  // Rayon 6 pixels
           )).then(() => {
             if (onComplete) {
               onComplete()
@@ -400,7 +400,7 @@ export default class CanvasManager {
       } else {
         // Animation du chemin terminée, maintenant animer le cercle avec délai et fondu
         const endPoint = reversedPath[reversedPath.length - 1]
-        this.animateEndCircle(endPoint, 300, 2).then(() => {
+        this.animateEndCircle(endPoint, 300, 6).then(() => {
           if (onComplete) {
             onComplete()
           }
@@ -489,11 +489,11 @@ export default class CanvasManager {
             
             // Animer le cercle avec délai et fondu
             const endPoint = reversedPath[reversedPath.length - 1]
-            this.animateEndCircle(endPoint, 300, 2).then(() => {
+            this.animateEndCircle(endPoint, 300, 6).then(() => {
               // Ajouter le cercle aux cercles terminés
               completedCircles.push({
                 endPoint: endPoint,
-                radius: 2
+                radius: 6
               })
               
               currentPathIndex++
@@ -775,7 +775,7 @@ export default class CanvasManager {
   private animateEndCircle(
     endPoint: Point, 
     animationDuration: number = 300,
-    radius: number = 2
+    radius: number = 6
   ): Promise<void> {
     return new Promise(resolve => {
       const startTime = performance.now()
