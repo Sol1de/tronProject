@@ -1,2 +1,334 @@
 @import "destyle.css";
 @import "tailwindcss";
+
+/* ================================
+ * Animation SVG pour le logo Tron
+ * ================================ */
+
+#tron-logo {
+  position: absolute;
+  z-index: 10;
+  opacity: 0;
+  transition: opacity 0.3s ease-in-out;
+  pointer-events: none;
+}
+
+#tron-logo.show {
+  opacity: 1;
+}
+
+#tron-logo svg .svg-elem-1 {
+  stroke-dashoffset: 517.0491943359375px;
+  stroke-dasharray: 517.0491943359375px;
+  fill: transparent;
+  -webkit-transition: stroke-dashoffset 5s linear 0s, fill 1s linear 5s;
+          transition: stroke-dashoffset 5s linear 0s, fill 1s linear 5s;
+}
+
+#tron-logo svg.active .svg-elem-1 {
+  stroke-dashoffset: 0;
+  fill: rgb(252, 254, 255);
+}
+
+#tron-logo svg .svg-elem-2 {
+  stroke-dashoffset: 2310.017822265625px;
+  stroke-dasharray: 2310.017822265625px;
+  fill: transparent;
+  -webkit-transition: stroke-dashoffset 5s linear 0s, fill 1s linear 5s;
+          transition: stroke-dashoffset 5s linear 0s, fill 1s linear 5s;
+}
+
+#tron-logo svg.active .svg-elem-2 {
+  stroke-dashoffset: 0;
+  fill: rgb(252, 254, 255);
+}
+
+#tron-logo svg .svg-elem-3 {
+  stroke-dashoffset: 517.0491943359375px;
+  stroke-dasharray: 517.0491943359375px;
+  -webkit-transition: stroke-dashoffset 5s linear 0s, fill 1s linear 5s;
+          transition: stroke-dashoffset 5s linear 0s, fill 1s linear 5s;
+}
+
+#tron-logo svg.active .svg-elem-3 {
+  stroke-dashoffset: 0;
+}
+
+#tron-logo svg .svg-elem-4 {
+  stroke-dashoffset: 2310.017822265625px;
+  stroke-dasharray: 2310.017822265625px;
+  -webkit-transition: stroke-dashoffset 5s linear 0s, fill 1s linear 5s;
+          transition: stroke-dashoffset 5s linear 0s, fill 1s linear 5s;
+}
+
+#tron-logo svg.active .svg-elem-4 {
+  stroke-dashoffset: 0;
+}
+
+#tron-logo svg .svg-elem-5 {
+  stroke-dashoffset: 1984.28271484375px;
+  stroke-dasharray: 1984.28271484375px;
+  fill: transparent;
+  -webkit-transition: stroke-dashoffset 5s linear 0s, fill 1s linear 5s;
+          transition: stroke-dashoffset 5s linear 0s, fill 1s linear 5s;
+}
+
+#tron-logo svg.active .svg-elem-5 {
+  stroke-dashoffset: 0;
+  fill: rgb(252, 254, 255);
+}
+
+#tron-logo svg .svg-elem-6 {
+  stroke-dashoffset: 2132.354248046875px;
+  stroke-dasharray: 2132.354248046875px;
+  fill: transparent;
+  -webkit-transition: stroke-dashoffset 5s linear 0s, fill 1s linear 5s;
+          transition: stroke-dashoffset 5s linear 0s, fill 1s linear 5s;
+}
+
+#tron-logo svg.active .svg-elem-6 {
+  stroke-dashoffset: 0;
+  fill: rgb(252, 254, 255);
+}
+
+#tron-logo svg .svg-elem-7 {
+  stroke-dashoffset: 1201.74609375px;
+  stroke-dasharray: 1201.74609375px;
+  fill: transparent;
+  -webkit-transition: stroke-dashoffset 5s linear 0s, fill 1s linear 5s;
+          transition: stroke-dashoffset 5s linear 0s, fill 1s linear 5s;
+}
+
+#tron-logo svg.active .svg-elem-7 {
+  stroke-dashoffset: 0;
+  fill: rgb(252, 254, 255);
+}
+
+#tron-logo svg .svg-elem-8 {
+  stroke-dashoffset: 1201.74609375px;
+  stroke-dasharray: 1201.74609375px;
+  fill: transparent;
+  -webkit-transition: stroke-dashoffset 5s linear 0s, fill 1s linear 5s;
+          transition: stroke-dashoffset 5s linear 0s, fill 1s linear 5s;
+}
+
+#tron-logo svg.active .svg-elem-8 {
+  stroke-dashoffset: 0;
+  fill: rgb(252, 254, 255);
+}
+
+#tron-logo svg .svg-elem-9 {
+  stroke-dashoffset: 1201.74609375px;
+  stroke-dasharray: 1201.74609375px;
+  -webkit-transition: stroke-dashoffset 5s linear 0s, fill 1s linear 5s;
+          transition: stroke-dashoffset 5s linear 0s, fill 1s linear 5s;
+}
+
+#tron-logo svg.active .svg-elem-9 {
+  stroke-dashoffset: 0;
+}
+
+#tron-logo svg .svg-elem-10 {
+  stroke-dashoffset: 1201.74609375px;
+  stroke-dasharray: 1201.74609375px;
+  -webkit-transition: stroke-dashoffset 5s linear 0s, fill 1s linear 5s;
+          transition: stroke-dashoffset 5s linear 0s, fill 1s linear 5s;
+}
+
+#tron-logo svg.active .svg-elem-10 {
+  stroke-dashoffset: 0;
+}
+
+/* ================================
+ * Styles Shadcn-UI Simples N&B
+ * ================================ */
+
+/* Sliders simples */
+.slider {
+  -webkit-appearance: none;
+  width: 100%;
+  height: 6px;
+  border-radius: 3px;
+  background: #e5e7eb;
+  outline: none;
+  transition: all 0.15s ease;
+}
+
+.slider:hover {
+  background: #d1d5db;
+}
+
+.slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #374151;
+  cursor: pointer;
+  border: 2px solid #ffffff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  transition: all 0.15s ease;
+}
+
+.slider::-webkit-slider-thumb:hover {
+  background: #1f2937;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+.slider::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #374151;
+  cursor: pointer;
+  border: 2px solid #ffffff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  transition: all 0.15s ease;
+}
+
+.slider::-moz-range-thumb:hover {
+  background: #1f2937;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+/* Scrollbar simple */
+.overflow-y-auto::-webkit-scrollbar {
+  width: 4px;
+}
+
+.overflow-y-auto::-webkit-scrollbar-track {
+  background: #f3f4f6;
+  border-radius: 2px;
+}
+
+.overflow-y-auto::-webkit-scrollbar-thumb {
+  background: #9ca3af;
+  border-radius: 2px;
+  transition: background 0.15s ease;
+}
+
+.overflow-y-auto::-webkit-scrollbar-thumb:hover {
+  background: #6b7280;
+}
+
+/* Input couleur simple */
+input[type="color"] {
+  -webkit-appearance: none;
+  border: none;
+  cursor: pointer;
+  background: none;
+}
+
+input[type="color"]::-webkit-color-swatch-wrapper {
+  padding: 0;
+  border-radius: 4px;
+  border: 1px solid #d1d5db;
+}
+
+input[type="color"]::-webkit-color-swatch {
+  border: none;
+  border-radius: 4px;
+}
+
+/* Checkboxes simples */
+input[type="checkbox"] {
+  accent-color: #374151;
+}
+
+/* Transitions simples */
+button, select, input {
+  transition: all 0.15s ease;
+}
+
+/* Focus states minimalistes */
+button:focus,
+select:focus,
+input:focus {
+  outline: 2px solid #374151;
+  outline-offset: 2px;
+}
+
+/* Hover effects subtils */
+button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+button:active {
+  transform: translateY(0);
+}
+
+/* Bouton principal simple */
+#launchAnimationBtn {
+  color: #000000 !important; /* text-white */
+}
+
+#launchAnimationBtn:hover:not(:disabled) {
+  background-color: #374151 !important; /* hover:bg-gray-700 */
+  color: #ffffff !important; /* hover:text-white */
+}
+
+#launchAnimationBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+  color: #ffffff !important; /* disabled:text-white */
+}
+
+/* Values en monospace */
+.font-mono {
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+}
+
+/* Canvas avec bordure simple */
+#canvas {
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  transition: box-shadow 0.15s ease;
+}
+
+#canvas:hover {
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+/* Animation simple pour les sections */
+.space-y-4 > div {
+  animation: fadeIn 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Responsive simple */
+@media (max-width: 1024px) {
+  .w-80 {
+    width: 16rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .flex {
+    flex-direction: column;
+  }
+  
+  .w-80 {
+    width: 100%;
+    height: auto;
+    max-height: 40vh;
+  }
+  
+  #canvas {
+    width: 90vw;
+    height: 90vw;
+    max-width: 500px;
+    max-height: 500px;
+  }
+}
+

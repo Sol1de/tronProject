@@ -87,18 +87,12 @@ export default class CanvasRenderer {
   }
 
   /**
-   * Dessine plusieurs chemins aléatoires avec des couleurs différentes
+   * Dessine plusieurs chemins aléatoires avec la couleur Tron
    */
-  public drawRandomPaths(randomPaths: RandomPath[], _strokeStyle: string = 'orange', lineWidth: number = 2): void {
-    randomPaths.forEach((randomPath, index) => {
+  public drawRandomPaths(randomPaths: RandomPath[], tronColor: string = '#00FFFF', lineWidth: number = 2): void {
+    randomPaths.forEach((randomPath) => {
       if (randomPath.path) {
-        const colors = ['orange', 'cyan', 'magenta', 'lime', 'yellow', 'pink', 'lightblue', 'lightgreen']
-        const color = colors[index % colors.length]
-        this.drawPath(randomPath.path, color, lineWidth)
-        
-        // Ajouter un numéro au milieu du chemin
-        const midPoint = randomPath.path[Math.floor(randomPath.path.length / 2)]
-        this.drawText(`${index + 1}`, midPoint.x + 10, midPoint.y - 10, 'white', '12px Arial')
+        this.drawPath(randomPath.path, tronColor, lineWidth)
       }
     })
   }
@@ -236,8 +230,6 @@ export default class CanvasRenderer {
     }
   }
 
-
-
   /**
    * Sauvegarde l'état actuel du contexte
    */
@@ -271,5 +263,436 @@ export default class CanvasRenderer {
    */
   public setLineWidth(width: number): void {
     this.context.lineWidth = width
+  }
+
+  /**
+   * Dessine tous les chemins avec style Tron et cercles de fin (en évitant les intersections)
+   */
+  public drawTronPaths(randomPaths: RandomPath[], lineWidth: number = 2, showEndCircles: boolean = true, tronColor: string = '#00FFFF'): void {
+    // Sauvegarder l'état actuel du contexte
+    this.context.save()
+    
+    // Configuration du style Tron
+    this.context.lineCap = 'round'
+    this.context.lineJoin = 'round'
+    
+    let circlesSkipped = 0
+    
+    randomPaths.forEach((randomPath, index) => {
+      if (randomPath.path) {
+        this.drawTronPath(randomPath.path, lineWidth, tronColor)
+        
+        // Ajouter le cercle à la fin du chemin si demandé et si pas d'intersection
+        if (showEndCircles) {
+          // Le premier point du chemin original est le point final (dans la deadzone)
+          const endPoint = randomPath.path[0]
+          
+          // Vérifier si ce point final est sur une intersection
+          if (!this.isEndPointOnIntersection(index, endPoint, randomPaths)) {
+            this.drawTronEndCircle(endPoint, 6, 1.0, tronColor)
+          } else {
+            circlesSkipped++
+          }
+        }
+      }
+    })
+    
+    if (circlesSkipped > 0) {
+      console.log(`🚫 ${circlesSkipped} cercles supprimés pour intersections (affichage statique)`)
+    }
+    
+    // Restaurer l'état du contexte
+    this.context.restore()
+  }
+
+  /**
+   * Dessine un chemin unique avec le style Tron bleu néon
+   */
+  private drawTronPath(path: Point[], lineWidth: number = 2, tronColor: string = '#00FFFF'): void {
+    if (path.length < 2) return
+    
+    // Couleurs Tron personnalisables
+    const tronBlue = tronColor
+    const tronGlow = this.adjustColorBrightness(tronColor, -0.3) // Couleur plus sombre pour le glow
+    
+    // Effet de lueur (glow) - dessiner plusieurs couches
+    for (let layer = 0; layer < 3; layer++) {
+      this.context.beginPath()
+      this.context.moveTo(path[0].x, path[0].y)
+      
+      for (let i = 1; i < path.length; i++) {
+        this.context.lineTo(path[i].x, path[i].y)
+      }
+      
+      // Configuration selon la couche
+      switch (layer) {
+        case 0: // Couche extérieure (glow large)
+          this.context.strokeStyle = tronGlow
+          this.context.lineWidth = lineWidth + 4
+          this.context.globalAlpha = 0.1
+          this.context.shadowBlur = 15
+          this.context.shadowColor = tronBlue
+          break
+        case 1: // Couche moyenne (glow moyen)
+          this.context.strokeStyle = tronGlow
+          this.context.lineWidth = lineWidth + 2
+          this.context.globalAlpha = 0.3
+          this.context.shadowBlur = 8
+          this.context.shadowColor = tronBlue
+          break
+        case 2: // Couche intérieure (ligne principale)
+          this.context.strokeStyle = tronBlue
+          this.context.lineWidth = lineWidth
+          this.context.globalAlpha = 1.0
+          this.context.shadowBlur = 3
+          this.context.shadowColor = tronBlue
+          break
+      }
+      
+      this.context.stroke()
+    }
+    
+    // Plus de numérotation des chemins pour un rendu plus propre
+  }
+
+  /**
+   * Dessine un chemin partiellement avec interpolation fluide
+   */
+  public drawTronPathPartial(path: Point[], progress: number, lineWidth: number = 2, shortenEnd: boolean = true, hasEndCircle: boolean = true, tronColor: string = '#00FFFF'): void {
+    if (path.length < 2 || progress <= 0) return
+    
+    // Limiter le progrès à 1.0
+    progress = Math.min(progress, 1.0)
+    
+    // Calculer la longueur totale et la longueur cible
+    const totalLength = this.calculatePathLength(path)
+    let targetLength = totalLength * progress
+    
+    // Raccourcir le chemin seulement si il aura un cercle de fin
+    if (shortenEnd && progress >= 1.0 && hasEndCircle) {
+      targetLength = Math.max(0, targetLength - 7) // Raccourcir de 7 pixels pour les cercles
+    }
+    
+    let currentLength = 0
+    let lastPoint = path[0]
+    const drawPath: Point[] = [path[0]]
+    
+    // Construire le chemin partiel avec interpolation
+    for (let i = 1; i < path.length; i++) {
+      const currentPoint = path[i]
+      const segmentLength = this.calculateDistance(lastPoint, currentPoint)
+      
+      if (currentLength + segmentLength <= targetLength) {
+        // Segment complet
+        drawPath.push(currentPoint)
+        currentLength += segmentLength
+        lastPoint = currentPoint
+      } else {
+        // Segment partiel avec interpolation
+        const remainingLength = targetLength - currentLength
+        const ratio = remainingLength / segmentLength
+        
+        const interpolatedPoint = {
+          x: lastPoint.x + (currentPoint.x - lastPoint.x) * ratio,
+          y: lastPoint.y + (currentPoint.y - lastPoint.y) * ratio
+        }
+        
+        drawPath.push(interpolatedPoint)
+        break
+      }
+    }
+    
+    // Dessiner le chemin partiel avec style Tron
+    if (drawPath.length >= 2) {
+      this.drawTronPathComplete(drawPath, lineWidth, tronColor)
+    }
+  }
+
+  /**
+   * Dessine un chemin complet avec style Tron (sans numérotation)
+   */
+  public drawTronPathComplete(path: Point[], lineWidth: number = 2, tronColor: string = '#00FFFF'): void {
+    if (path.length < 2) return
+    
+    // Couleurs Tron personnalisables
+    const tronBlue = tronColor
+    const tronGlow = this.adjustColorBrightness(tronColor, -0.3) // Couleur plus sombre pour le glow
+    
+    // Effet de lueur (glow) - dessiner plusieurs couches
+    for (let layer = 0; layer < 3; layer++) {
+      this.context.beginPath()
+      this.context.moveTo(path[0].x, path[0].y)
+      
+      for (let i = 1; i < path.length; i++) {
+        this.context.lineTo(path[i].x, path[i].y)
+      }
+      
+      // Configuration selon la couche
+      switch (layer) {
+        case 0: // Couche extérieure (glow large)
+          this.context.strokeStyle = tronGlow
+          this.context.lineWidth = lineWidth + 4
+          this.context.globalAlpha = 0.1
+          this.context.shadowBlur = 15
+          this.context.shadowColor = tronBlue
+          break
+        case 1: // Couche moyenne (glow moyen)
+          this.context.strokeStyle = tronGlow
+          this.context.lineWidth = lineWidth + 2
+          this.context.globalAlpha = 0.3
+          this.context.shadowBlur = 8
+          this.context.shadowColor = tronBlue
+          break
+        case 2: // Couche intérieure (ligne principale)
+          this.context.strokeStyle = tronBlue
+          this.context.lineWidth = lineWidth
+          this.context.globalAlpha = 1.0
+          this.context.shadowBlur = 3
+          this.context.shadowColor = tronBlue
+          break
+      }
+      
+      this.context.stroke()
+    }
+  }
+
+  /**
+   * Calcule la longueur totale d'un chemin
+   */
+  public calculatePathLength(path: Point[]): number {
+    let totalLength = 0
+    for (let i = 1; i < path.length; i++) {
+      totalLength += this.calculateDistance(path[i - 1], path[i])
+    }
+    return totalLength
+  }
+
+  /**
+   * Calcule la distance entre deux points
+   */
+  public calculateDistance(point1: Point, point2: Point): number {
+    const dx = point2.x - point1.x
+    const dy = point2.y - point1.y
+    return Math.sqrt(dx * dx + dy * dy)
+  }
+
+  /**
+   * Dessine un cercle néon avec bordure nette de 1 pixel (sans glow)
+   */
+  public drawTronEndCircle(point: Point, radius: number = 6, alpha: number = 1.0, tronColor: string = '#00FFFF'): void {
+    this.context.save()
+    
+    // Utiliser la couleur configurée
+    const tronBlue = tronColor
+    
+    // Dessiner seulement la bordure nette sans aucun effet
+    this.context.beginPath()
+    this.context.arc(point.x, point.y, radius, 0, 2 * Math.PI)
+    
+    // Bordure nette de 1 pixel - aucun effet
+    this.context.strokeStyle = tronBlue
+    this.context.lineWidth = 1
+    this.context.globalAlpha = alpha
+    // Supprimer complètement les effets shadow/glow
+    this.context.shadowBlur = 0
+    this.context.shadowColor = 'transparent'
+    
+    // Dessiner uniquement la bordure (stroke, pas fill)
+    this.context.stroke()
+    
+    this.context.restore()
+  }
+
+  /**
+   * Dessine un cercle partiellement (animation d'arc progressif) avec bordure nette de 1 pixel
+   */
+  public drawTronEndCirclePartial(point: Point, radius: number = 6, progress: number = 1.0, tronColor: string = '#00FFFF'): void {
+    if (progress <= 0) return
+    
+    this.context.save()
+    
+    // Utiliser la couleur configurée
+    const tronBlue = tronColor
+    
+    // Calculer l'angle final basé sur le progrès (0 à 2π)
+    const endAngle = progress * 2 * Math.PI
+    
+    // Dessiner seulement la bordure nette sans aucun effet
+    this.context.beginPath()
+    // Commencer à -π/2 (12h) et dessiner dans le sens horaire
+    this.context.arc(point.x, point.y, radius, -Math.PI / 2, -Math.PI / 2 + endAngle)
+    
+    // Bordure nette de 1 pixel - aucun effet
+    this.context.strokeStyle = tronBlue
+    this.context.lineWidth = 1
+    this.context.globalAlpha = 1.0
+    // Supprimer complètement les effets shadow/glow
+    this.context.shadowBlur = 0
+    this.context.shadowColor = 'transparent'
+    
+    // Dessiner seulement l'arc
+    this.context.stroke()
+    
+    this.context.restore()
+  }
+
+  /**
+   * Utilitaire pour ajuster la luminosité d'une couleur hexadécimale
+   */
+  private adjustColorBrightness(hex: string, percent: number): string {
+    // Enlever le # si présent
+    hex = hex.replace('#', '')
+    
+    // Convertir hex en RGB
+    const r = parseInt(hex.substr(0, 2), 16)
+    const g = parseInt(hex.substr(2, 2), 16)
+    const b = parseInt(hex.substr(4, 2), 16)
+    
+    // Ajuster la luminosité
+    const newR = Math.max(0, Math.min(255, r + (r * percent)))
+    const newG = Math.max(0, Math.min(255, g + (g * percent)))
+    const newB = Math.max(0, Math.min(255, b + (b * percent)))
+    
+    // Convertir de nouveau en hex
+    const toHex = (n: number) => {
+      const hex = Math.round(n).toString(16)
+      return hex.length === 1 ? '0' + hex : hex
+    }
+    
+    return `#${toHex(newR)}${toHex(newG)}${toHex(newB)}`
+  }
+
+  /**
+   * Anime les chemins Tron de manière progressive et fluide à 60 FPS
+   */
+  public animateTronPaths(
+    randomPaths: RandomPath[], 
+    lineWidth: number = 2,
+    durationMs: number = 2000, // Durée totale en millisecondes
+    onComplete?: () => void
+  ): void {
+    if (randomPaths.length === 0) {
+      onComplete?.()
+      return
+    }
+
+    // Préparer les chemins inversés (extérieur vers centre)
+    const animationPaths = randomPaths.map(randomPath => ({
+      path: randomPath.path ? [...randomPath.path].reverse() : [],
+      pathIndex: randomPaths.indexOf(randomPath),
+      isCompleted: false
+    })).filter(item => item.path.length >= 2)
+
+    if (animationPaths.length === 0) {
+      onComplete?.()
+      return
+    }
+
+    const startTime = performance.now()
+
+    // Configuration du style Tron
+    this.context.save()
+    this.context.lineCap = 'round'
+    this.context.lineJoin = 'round'
+    
+    const animateFrame = (currentTime: number) => {
+      const elapsedTime = currentTime - startTime
+      const progress = Math.min(elapsedTime / durationMs, 1.0)
+
+      // Redessiner tous les chemins avec le progrès actuel
+              animationPaths.forEach(animPath => {
+          if (animPath.path.length >= 2) {
+            // Marquer comme complété si le progrès est fini
+            if (progress >= 1.0) {
+              animPath.isCompleted = true
+            }
+            
+            // Vérifier si ce path a un cercle de fin
+            const endPoint = animPath.path[animPath.path.length - 1]
+            const hasEndCircle = !this.isEndPointOnIntersection(animPath.pathIndex, endPoint, randomPaths)
+            this.drawTronPathPartial(animPath.path, progress, lineWidth, true, hasEndCircle, '#00FFFF')
+          }
+        })
+
+      if (progress < 1.0) {
+        requestAnimationFrame(animateFrame)
+      } else {
+        this.context.restore()
+        onComplete?.()
+      }
+    }
+
+    requestAnimationFrame(animateFrame)
+  }
+
+  /**
+   * Anime un seul chemin Tron de manière progressive et fluide à 60 FPS
+   */
+  public animateTronPath(
+    path: Point[], 
+    lineWidth: number = 2,
+    durationMs: number = 2000, // Durée totale en millisecondes
+    onComplete?: () => void,
+    pathIndex?: number,
+    allPaths?: RandomPath[]
+  ): void {
+    if (path.length < 2) {
+      onComplete?.()
+      return
+    }
+
+    // Inverser le chemin pour aller de l'extérieur vers le centre
+    const reversedPath = [...path].reverse()
+    const startTime = performance.now()
+
+    // Configuration du style Tron
+    this.context.save()
+    this.context.lineCap = 'round'
+    this.context.lineJoin = 'round'
+    
+    const animateFrame = (currentTime: number) => {
+      const elapsedTime = currentTime - startTime
+      const progress = Math.min(elapsedTime / durationMs, 1.0)
+
+      // Dessiner le chemin avec le progrès actuel
+      const endPoint = reversedPath[reversedPath.length - 1]
+      let hasEndCircle = true
+      if (pathIndex !== undefined && allPaths) {
+        hasEndCircle = !this.isEndPointOnIntersection(pathIndex, endPoint, allPaths)
+      }
+      this.drawTronPathPartial(reversedPath, progress, lineWidth, true, hasEndCircle, '#00FFFF')
+
+      if (progress < 1.0) {
+        requestAnimationFrame(animateFrame)
+      } else {
+        this.context.restore()
+        onComplete?.()
+      }
+    }
+
+    requestAnimationFrame(animateFrame)
+  }
+
+  /**
+   * Vérifie si un point final de chemin intersecte avec un autre chemin existant
+   */
+  private isEndPointOnIntersection(pathIndex: number, endPoint: Point, allPaths: RandomPath[]): boolean {
+    // Vérifier contre tous les autres chemins
+    for (let i = 0; i < allPaths.length; i++) {
+      if (i === pathIndex) continue // Ignorer le chemin lui-même
+      
+      const otherPath = allPaths[i].path
+      if (!otherPath || otherPath.length < 2) continue
+      
+      // Vérifier si le point final intersecte avec un point du milieu de l'autre chemin
+      // (exclure le premier et dernier point de l'autre chemin)
+      for (let j = 1; j < otherPath.length - 1; j++) {
+        const otherPoint = otherPath[j]
+        if (Math.abs(endPoint.x - otherPoint.x) < 1 && Math.abs(endPoint.y - otherPoint.y) < 1) {
+          return true // Intersection détectée
+        }
+      }
+    }
+    return false
   }
 } 
