@@ -362,9 +362,9 @@ export default class CanvasRenderer {
     const totalLength = this.calculatePathLength(path)
     let targetLength = totalLength * progress
     
-    // Raccourcir le chemin de 8 pixels pour éviter que le trait apparaisse dans le cercle
+    // Raccourcir le chemin de 3 pixels pour éviter que le trait apparaisse dans le cercle (ajusté pour rayon 2px)
     if (shortenEnd && progress >= 1.0) {
-      targetLength = Math.max(0, targetLength - 8)
+      targetLength = Math.max(0, targetLength - 3)
     }
     
     let currentLength = 0
