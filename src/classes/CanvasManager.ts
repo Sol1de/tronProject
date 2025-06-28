@@ -666,6 +666,15 @@ export default class CanvasManager {
     this.redraw(false)
     console.log('✅ Canvas redessiné sans grille')
 
+    const triggerLogo = () => {
+      if (typeof window !== 'undefined' && window.triggerTronLogoAnimation) {
+        const deadZone = this.gridManager.getDeadZone()
+        if (deadZone) {
+          window.triggerTronLogoAnimation(deadZone)
+        }
+      }
+    }
+
     // 3. Exemple 1: Animation de tous les chemins simultanément
     setTimeout(() => {
       console.log('🎬 Animation simultanée fluide de tous les chemins')
@@ -683,6 +692,9 @@ export default class CanvasManager {
               console.log('🎨 Affichage statique style Tron avec cercles')
               this.redrawWithTron(false, 2, true)
               console.log('✅ Style Tron appliqué avec cercles de fin')
+              
+              // Déclencher l'animation du logo à la fin de toute la démonstration
+              triggerLogo()
             }, 2000)
           })
         }, 2000)
@@ -699,11 +711,21 @@ export default class CanvasManager {
     this.setRandomPaths()
     console.log('✅ Nouveaux chemins générés')
 
+    const triggerLogo = () => {
+      if (typeof window !== 'undefined' && window.triggerTronLogoAnimation) {
+        const deadZone = this.gridManager.getDeadZone()
+        if (deadZone) {
+          window.triggerTronLogoAnimation(deadZone)
+        }
+      }
+    }
+
     switch (mode) {
       case 'simultaneous':
         console.log('🎬 Test: Animation simultanée fluide (normale)')
         this.animateTronPathsNormal(2, true, () => {
           console.log('✅ Test animation simultanée terminé')
+          triggerLogo()
         })
         break
         
@@ -711,6 +733,7 @@ export default class CanvasManager {
         console.log('🎬 Test: Animation séquentielle fluide')
         this.animateTronPathsSequentially(2, 1200, 250, true, () => {
           console.log('✅ Test animation séquentielle terminé')
+          triggerLogo()
         })
         break
         
@@ -718,12 +741,14 @@ export default class CanvasManager {
         console.log('🎨 Test: Affichage statique Tron avec cercles')
         this.redrawWithTron(false, 2, true)
         console.log('✅ Test affichage statique avec cercles terminé')
+        triggerLogo()
         break
 
       case 'slow':
         console.log('🎬 Test: Animation fluide LENTE')
         this.animateTronPathsSlow(2, true, () => {
           console.log('✅ Test animation lente terminé')
+          triggerLogo()
         })
         break
 
@@ -731,6 +756,7 @@ export default class CanvasManager {
         console.log('🎬 Test: Animation fluide NORMALE')
         this.animateTronPathsNormal(2, true, () => {
           console.log('✅ Test animation normale terminé')
+          triggerLogo()
         })
         break
 
@@ -738,6 +764,7 @@ export default class CanvasManager {
         console.log('🎬 Test: Animation fluide RAPIDE')
         this.animateTronPathsFast(2, true, () => {
           console.log('✅ Test animation rapide terminé')
+          triggerLogo()
         })
         break
 
@@ -745,6 +772,7 @@ export default class CanvasManager {
         console.log('🎬 Test: Animation fluide TRÈS RAPIDE')
         this.animateTronPathsVeryFast(2, true, () => {
           console.log('✅ Test animation très rapide terminé')
+          triggerLogo()
         })
         break
     }
@@ -758,8 +786,18 @@ export default class CanvasManager {
     this.setRandomPaths()
     console.log(`🎬 Test: Animation fluide avec durée personnalisée (${durationMs}ms)`)
     
+    const triggerLogo = () => {
+      if (typeof window !== 'undefined' && window.triggerTronLogoAnimation) {
+        const deadZone = this.gridManager.getDeadZone()
+        if (deadZone) {
+          window.triggerTronLogoAnimation(deadZone)
+        }
+      }
+    }
+    
     this.animateTronPathsWithDuration(durationMs, 2, true, () => {
       console.log('✅ Test animation personnalisée terminé')
+      triggerLogo()
     })
   }
 
@@ -771,6 +809,15 @@ export default class CanvasManager {
     
     // Générer de nouveaux chemins
     this.setRandomPaths()
+    
+    const triggerLogo = () => {
+      if (typeof window !== 'undefined' && window.triggerTronLogoAnimation) {
+        const deadZone = this.gridManager.getDeadZone()
+        if (deadZone) {
+          window.triggerTronLogoAnimation(deadZone)
+        }
+      }
+    }
     
     // Séquence de démonstration des vitesses
     setTimeout(() => {
@@ -786,6 +833,7 @@ export default class CanvasManager {
                   console.log('4️⃣ Animation fluide LENTE...')
                   this.animateTronPathsSlow(2, true, () => {
                     console.log('✅ Démonstration des vitesses terminée')
+                    triggerLogo()
                   })
                 }, 1000)
               })

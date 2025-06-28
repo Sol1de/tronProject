@@ -1,2 +1,140 @@
 @import "destyle.css";
 @import "tailwindcss";
+
+/* ================================
+ * Animation SVG pour le logo Tron
+ * ================================ */
+
+#tron-logo {
+  position: absolute;
+  z-index: 10;
+  opacity: 0;
+  transition: opacity 0.3s ease-in-out;
+  pointer-events: none;
+}
+
+#tron-logo.show {
+  opacity: 1;
+}
+
+#tron-logo svg .svg-elem-1 {
+  stroke-dashoffset: 517.0491943359375px;
+  stroke-dasharray: 517.0491943359375px;
+  fill: transparent;
+  -webkit-transition: stroke-dashoffset 5s linear 0s, fill 1s linear 5s;
+          transition: stroke-dashoffset 5s linear 0s, fill 1s linear 5s;
+}
+
+#tron-logo svg.active .svg-elem-1 {
+  stroke-dashoffset: 0;
+  fill: rgb(252, 254, 255);
+}
+
+#tron-logo svg .svg-elem-2 {
+  stroke-dashoffset: 2310.017822265625px;
+  stroke-dasharray: 2310.017822265625px;
+  fill: transparent;
+  -webkit-transition: stroke-dashoffset 5s linear 0s, fill 1s linear 5s;
+          transition: stroke-dashoffset 5s linear 0s, fill 1s linear 5s;
+}
+
+#tron-logo svg.active .svg-elem-2 {
+  stroke-dashoffset: 0;
+  fill: rgb(252, 254, 255);
+}
+
+#tron-logo svg .svg-elem-3 {
+  stroke-dashoffset: 517.0491943359375px;
+  stroke-dasharray: 517.0491943359375px;
+  -webkit-transition: stroke-dashoffset 5s linear 0s, fill 1s linear 5s;
+          transition: stroke-dashoffset 5s linear 0s, fill 1s linear 5s;
+}
+
+#tron-logo svg.active .svg-elem-3 {
+  stroke-dashoffset: 0;
+}
+
+#tron-logo svg .svg-elem-4 {
+  stroke-dashoffset: 2310.017822265625px;
+  stroke-dasharray: 2310.017822265625px;
+  -webkit-transition: stroke-dashoffset 5s linear 0s, fill 1s linear 5s;
+          transition: stroke-dashoffset 5s linear 0s, fill 1s linear 5s;
+}
+
+#tron-logo svg.active .svg-elem-4 {
+  stroke-dashoffset: 0;
+}
+
+#tron-logo svg .svg-elem-5 {
+  stroke-dashoffset: 1984.28271484375px;
+  stroke-dasharray: 1984.28271484375px;
+  fill: transparent;
+  -webkit-transition: stroke-dashoffset 5s linear 0s, fill 1s linear 5s;
+          transition: stroke-dashoffset 5s linear 0s, fill 1s linear 5s;
+}
+
+#tron-logo svg.active .svg-elem-5 {
+  stroke-dashoffset: 0;
+  fill: rgb(252, 254, 255);
+}
+
+#tron-logo svg .svg-elem-6 {
+  stroke-dashoffset: 2132.354248046875px;
+  stroke-dasharray: 2132.354248046875px;
+  fill: transparent;
+  -webkit-transition: stroke-dashoffset 5s linear 0s, fill 1s linear 5s;
+          transition: stroke-dashoffset 5s linear 0s, fill 1s linear 5s;
+}
+
+#tron-logo svg.active .svg-elem-6 {
+  stroke-dashoffset: 0;
+  fill: rgb(252, 254, 255);
+}
+
+#tron-logo svg .svg-elem-7 {
+  stroke-dashoffset: 1201.74609375px;
+  stroke-dasharray: 1201.74609375px;
+  fill: transparent;
+  -webkit-transition: stroke-dashoffset 5s linear 0s, fill 1s linear 5s;
+          transition: stroke-dashoffset 5s linear 0s, fill 1s linear 5s;
+}
+
+#tron-logo svg.active .svg-elem-7 {
+  stroke-dashoffset: 0;
+  fill: rgb(252, 254, 255);
+}
+
+#tron-logo svg .svg-elem-8 {
+  stroke-dashoffset: 1201.74609375px;
+  stroke-dasharray: 1201.74609375px;
+  fill: transparent;
+  -webkit-transition: stroke-dashoffset 5s linear 0s, fill 1s linear 5s;
+          transition: stroke-dashoffset 5s linear 0s, fill 1s linear 5s;
+}
+
+#tron-logo svg.active .svg-elem-8 {
+  stroke-dashoffset: 0;
+  fill: rgb(252, 254, 255);
+}
+
+#tron-logo svg .svg-elem-9 {
+  stroke-dashoffset: 1201.74609375px;
+  stroke-dasharray: 1201.74609375px;
+  -webkit-transition: stroke-dashoffset 5s linear 0s, fill 1s linear 5s;
+          transition: stroke-dashoffset 5s linear 0s, fill 1s linear 5s;
+}
+
+#tron-logo svg.active .svg-elem-9 {
+  stroke-dashoffset: 0;
+}
+
+#tron-logo svg .svg-elem-10 {
+  stroke-dashoffset: 1201.74609375px;
+  stroke-dasharray: 1201.74609375px;
+  -webkit-transition: stroke-dashoffset 5s linear 0s, fill 1s linear 5s;
+          transition: stroke-dashoffset 5s linear 0s, fill 1s linear 5s;
+}
+
+#tron-logo svg.active .svg-elem-10 {
+  stroke-dashoffset: 0;
+}
