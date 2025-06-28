@@ -257,10 +257,12 @@ export default class CanvasManager {
       this.renderer.setLineWidth(lineWidth)
       
       // Dessiner chaque chemin partiellement
-      this.randomPaths.forEach(randomPath => {
+      this.randomPaths.forEach((randomPath, pathIndex) => {
         if (randomPath.path && randomPath.path.length >= 2) {
           const reversedPath = [...randomPath.path].reverse()
-          this.renderer.drawTronPathPartial(reversedPath, progress, lineWidth)
+          const endPoint = reversedPath[reversedPath.length - 1]
+          const hasEndCircle = !this.isEndPointOnIntersection(pathIndex, endPoint)
+          this.renderer.drawTronPathPartial(reversedPath, progress, lineWidth, true, hasEndCircle)
         }
       })
       
@@ -395,7 +397,9 @@ export default class CanvasManager {
 
       // Dessiner le chemin avec le progrès actuel
       this.renderer.save()
-      this.renderer.drawTronPathPartial(reversedPath, progress, lineWidth)
+      const endPoint = reversedPath[reversedPath.length - 1]
+      const hasEndCircle = !this.isEndPointOnIntersection(pathIndex, endPoint)
+      this.renderer.drawTronPathPartial(reversedPath, progress, lineWidth, true, hasEndCircle)
       this.renderer.restore()
 
       if (progress < 1.0) {
@@ -478,7 +482,9 @@ export default class CanvasManager {
           // Redessiner tous les chemins déjà terminés
           this.renderer.save()
           completedPaths.forEach(completedPath => {
-            this.renderer.drawTronPathPartial(completedPath.path, 1.0, lineWidth, true)
+            const endPoint = completedPath.path[completedPath.path.length - 1]
+            const hasEndCircle = !this.isEndPointOnIntersection(completedPath.index, endPoint)
+            this.renderer.drawTronPathPartial(completedPath.path, 1.0, lineWidth, true, hasEndCircle)
           })
           
           // Redessiner tous les cercles déjà terminés
@@ -487,7 +493,9 @@ export default class CanvasManager {
           })
 
           // Dessiner le chemin en cours d'animation
-          this.renderer.drawTronPathPartial(reversedPath, progress, lineWidth, true)
+          const endPoint = reversedPath[reversedPath.length - 1]
+          const hasEndCircle = !this.isEndPointOnIntersection(pathInOriginalArray, endPoint)
+          this.renderer.drawTronPathPartial(reversedPath, progress, lineWidth, true, hasEndCircle)
           this.renderer.restore()
 
           if (progress < 1.0) {

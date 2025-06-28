@@ -364,7 +364,7 @@ export default class CanvasRenderer {
   /**
    * Dessine un chemin partiellement avec interpolation fluide
    */
-  public drawTronPathPartial(path: Point[], progress: number, lineWidth: number = 2, shortenEnd: boolean = true): void {
+  public drawTronPathPartial(path: Point[], progress: number, lineWidth: number = 2, shortenEnd: boolean = true, hasEndCircle: boolean = true): void {
     if (path.length < 2 || progress <= 0) return
     
     // Limiter le progrès à 1.0
@@ -374,9 +374,9 @@ export default class CanvasRenderer {
     const totalLength = this.calculatePathLength(path)
     let targetLength = totalLength * progress
     
-    // Raccourcir le chemin de 7 pixels pour éviter que le trait apparaisse dans le cercle (ajusté pour rayon 6px)
-    if (shortenEnd && progress >= 1.0) {
-      targetLength = Math.max(0, targetLength - 7)
+    // Raccourcir le chemin seulement si il aura un cercle de fin
+    if (shortenEnd && progress >= 1.0 && hasEndCircle) {
+      targetLength = Math.max(0, targetLength - 7) // Raccourcir de 7 pixels pour les cercles
     }
     
     let currentLength = 0
@@ -587,7 +587,10 @@ export default class CanvasRenderer {
             animPath.isCompleted = true
           }
           
-          this.drawTronPathPartial(animPath.path, progress, lineWidth, true)
+          // Vérifier si ce path a un cercle de fin
+          const endPoint = animPath.path[animPath.path.length - 1]
+          const hasEndCircle = !this.isEndPointOnIntersection(animPath.pathIndex, endPoint, randomPaths)
+          this.drawTronPathPartial(animPath.path, progress, lineWidth, true, hasEndCircle)
         }
       })
 
@@ -609,7 +612,9 @@ export default class CanvasRenderer {
     path: Point[], 
     lineWidth: number = 2,
     durationMs: number = 2000, // Durée totale en millisecondes
-    onComplete?: () => void
+    onComplete?: () => void,
+    pathIndex?: number,
+    allPaths?: RandomPath[]
   ): void {
     if (path.length < 2) {
       onComplete?.()
@@ -630,7 +635,12 @@ export default class CanvasRenderer {
       const progress = Math.min(elapsedTime / durationMs, 1.0)
 
       // Dessiner le chemin avec le progrès actuel
-      this.drawTronPathPartial(reversedPath, progress, lineWidth, true)
+      const endPoint = reversedPath[reversedPath.length - 1]
+      let hasEndCircle = true
+      if (pathIndex !== undefined && allPaths) {
+        hasEndCircle = !this.isEndPointOnIntersection(pathIndex, endPoint, allPaths)
+      }
+      this.drawTronPathPartial(reversedPath, progress, lineWidth, true, hasEndCircle)
 
       if (progress < 1.0) {
         requestAnimationFrame(animateFrame)
