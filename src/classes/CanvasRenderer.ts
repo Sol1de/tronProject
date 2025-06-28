@@ -95,10 +95,6 @@ export default class CanvasRenderer {
         const colors = ['orange', 'cyan', 'magenta', 'lime', 'yellow', 'pink', 'lightblue', 'lightgreen']
         const color = colors[Math.floor(Math.random() * colors.length)]
         this.drawPath(randomPath.path, color, lineWidth)
-        
-        // Ajouter un numéro au milieu du chemin
-        const midPoint = randomPath.path[Math.floor(randomPath.path.length / 2)]
-        this.drawText(`${Math.floor(Math.random() * 8 + 1)}`, midPoint.x + 10, midPoint.y - 10, 'white', '12px Arial')
       }
     })
   }

@@ -1,78 +1,262 @@
 import './style.css'
 import CanvasManager from './classes/CanvasManager'
 
-document.querySelector<HTMLDivElement>('#app')!.innerHTML = /*html*/`
-  <div class="flex flex-col justify-center items-center h-screen gap-4">
-    <div class="flex gap-2 mb-4">
-      <button id="generateRandomPathsBtn" class="bg-purple-500 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded">
-        Generate Auto Paths
-      </button>
-      <button id="clearRandomPathsBtn" class="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded">
-        Clear Auto Paths
-      </button>
-      <button id="showStatsBtn" class="bg-indigo-500 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded">
-        Show Stats
-      </button>
-      <button id="testTronBtn" class="bg-cyan-500 hover:bg-cyan-700 text-white font-bold py-2 px-4 rounded">
-        🚀 Test Tron Animation
-      </button>
-    </div>
-    
-    <div class="flex gap-2 mb-4">
-      <button id="tronSimultaneousBtn" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-1 px-3 rounded text-sm">
-        Simultaneous
-      </button>
-      <button id="tronSequentialBtn" class="bg-green-500 hover:bg-green-700 text-white font-bold py-1 px-3 rounded text-sm">
-        Sequential
-      </button>
-      <button id="tronStaticBtn" class="bg-yellow-500 hover:bg-yellow-700 text-white font-bold py-1 px-3 rounded text-sm">
-        Static Tron
-      </button>
-    </div>
+// Configuration par défaut
+const defaultConfig = {
+  grid: {
+    sizeWidth: 50,
+    sizeHeight: 50,
+    deadZoneWidth: 200,
+    deadZoneHeight: 150,
+    centerX: 300,
+    centerY: 300,
+    visible: false
+  },
+  animation: {
+    mode: 'simultaneous' as 'simultaneous' | 'sequential' | 'static',
+    speed: 'normal' as 'very-fast' | 'fast' | 'normal' | 'slow',
+    duration: 2000,
+    lineWidth: 2,
+    showEndCircles: true,
+    clearFirst: true
+  },
+  paths: {
+    numberOfPaths: 12,
+    color: '#ff6b35',
+    tronColor: '#00bfff'
+  },
+  rendering: {
+    gridColor: '#333333',
+    backgroundColor: '#000000'
+  }
+}
 
-    <div class="flex gap-2 mb-4">
-      <button id="tronVeryFastBtn" class="bg-red-400 hover:bg-red-600 text-white font-bold py-1 px-3 rounded text-sm">
-        ⚡ Very Fast
-      </button>
-      <button id="tronFastBtn" class="bg-orange-400 hover:bg-orange-600 text-white font-bold py-1 px-3 rounded text-sm">
-        🚀 Fast
-      </button>
-      <button id="tronNormalBtn" class="bg-blue-400 hover:bg-blue-600 text-white font-bold py-1 px-3 rounded text-sm">
-        🚶 Normal
-      </button>
-      <button id="tronSlowBtn" class="bg-gray-400 hover:bg-gray-600 text-white font-bold py-1 px-3 rounded text-sm">
-        🐌 Slow
-      </button>
-      <button id="demonstrateSpeedsBtn" class="bg-purple-400 hover:bg-purple-600 text-white font-bold py-1 px-3 rounded text-sm">
-        🎬 Demo Speeds
-      </button>
-    </div>
+let currentConfig = { ...defaultConfig }
+let canvas: CanvasManager
+let isAnimating = false
+
+document.querySelector<HTMLDivElement>('#app')!.innerHTML = /*html*/`
+  <div class="flex h-screen bg-gray-50 text-gray-900">
     
-    <!-- Canvas avec position relative pour le SVG overlay -->
-    <div class="relative">
-      <canvas id="canvas" width="600" height="600" class="bg-black border-2 border-white"></canvas>
-      
-      <!-- SVG Logo Tron positionné au centre du canvas -->
-      <div id="tron-logo">
-        <svg width="1001" height="236" viewBox="0 0 1001 236" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path fill-rule="evenodd" clip-rule="evenodd" d="M93 10V59.5L86 67H7.5L1 59.5V9L8 2H85.5L93 10ZM13 14V55H81V14H13Z" fill="#FCFEFF" class="svg-elem-1"></path>
-          <path fill-rule="evenodd" clip-rule="evenodd" d="M174 72V227.5L166.5 235H113.5L106 227.5V72C107 18.5 155.5 2 161.5 2H437C464.5 2 506 25.5 506 67H177.5C177.5 67 174 68 174 72ZM118 224V72C118 34.5 150 14 171 14H430.5C471.5 14 489 44 491 55H175.5C173 55 162 61 162 72V224H118Z" fill="#FCFEFF" class="svg-elem-2"></path>
-          <path fill-rule="evenodd" clip-rule="evenodd" d="M93 10V59.5L86 67H7.5L1 59.5V9L8 2H85.5L93 10ZM13 14V55H81V14H13Z" stroke="#5AAFF0" stroke-width="2" class="svg-elem-3"></path>
-          <path fill-rule="evenodd" clip-rule="evenodd" d="M174 72V227.5L166.5 235H113.5L106 227.5V72C107 18.5 155.5 2 161.5 2H437C464.5 2 506 25.5 506 67H177.5C177.5 67 174 68 174 72ZM118 224V72C118 34.5 150 14 171 14H430.5C471.5 14 489 44 491 55H175.5C173 55 162 61 162 72V224H118Z" stroke="#5AAFF0" stroke-width="2" class="svg-elem-4"></path>
-          <path d="M504.894 87C502.432 109.844 491.356 125.382 477.721 135.381C463.84 145.56 447.29 150.007 434.462 150.501L433.5 150.538V152.923L433.803 153.217L505 222.422V234H430.924L337.5 137.595V94.3945L344.433 87H504.894ZM317.086 87L324 93.9141V227.086L317.086 234H264.914L258 227.086V93.9141L264.914 87H317.086ZM268 224H314V97H268V224ZM347 134.414L436.586 224H491.925L490.205 222.291L408.425 141H433C440.925 141 453.097 138.454 464.561 131.867C476.044 125.269 486.864 114.585 491.954 98.2979L492.36 97H347V134.414Z" fill="#FCFEFF" stroke="#5AAFF0" stroke-width="2" class="svg-elem-5"></path>
-          <path d="M632 3C697.19 3 750 54.731 750 118.5C750 182.269 697.19 234 632 234C566.81 234 514 182.269 514 118.5C514 54.731 566.81 3 632 3ZM632.5 13C572.599 13 524 60.4358 524 119C524 177.564 572.599 225 632.5 225C692.401 225 741 177.564 741 119C741 60.4358 692.401 13 632.5 13ZM633 58C667.809 58 696 85.7731 696 120C696 154.227 667.809 182 633 182C598.191 182 570 154.227 570 120C570 85.7731 598.191 58 633 58ZM633 68C603.747 68 580 91.263 580 120C580 148.737 603.747 172 633 172C662.253 172 686 148.737 686 120C686 91.263 662.253 68 633 68Z" fill="#FCFEFF" stroke="#5AAFF0" stroke-width="2" class="svg-elem-6"></path>
-          <path fill-rule="evenodd" clip-rule="evenodd" d="M760 228V9L766.5 2H794L878 96V133L871 140H826V228L819 235H767L760 228ZM771 224H815V129H867V101L790 13H771V224Z" fill="#FCFEFF" class="svg-elem-7"></path>
-          <path fill-rule="evenodd" clip-rule="evenodd" d="M1000 8V227L993.5 234H966L882 140V103L889 96H934V8L941 1H993L1000 8ZM989 12H945V107H893V135L970 223H989V12Z" fill="#FCFEFF" class="svg-elem-8"></path>
-          <path fill-rule="evenodd" clip-rule="evenodd" d="M760 228V9L766.5 2H794L878 96V133L871 140H826V228L819 235H767L760 228ZM771 224H815V129H867V101L790 13H771V224Z" stroke="#5AAFF0" stroke-width="2" class="svg-elem-9"></path>
-          <path fill-rule="evenodd" clip-rule="evenodd" d="M1000 8V227L993.5 234H966L882 140V103L889 96H934V8L941 1H993L1000 8ZM989 12H945V107H893V135L970 223H989V12Z" stroke="#5AAFF0" stroke-width="2" class="svg-elem-10"></path>
-        </svg>
+    <!-- Panneau de Configuration à Gauche -->
+    <div class="w-80 bg-white border-r border-gray-200 p-6 overflow-y-auto">
+      <div class="space-y-6">
+        
+        <!-- Titre -->
+        <div class="text-center">
+          <h1 class="text-2xl font-bold text-gray-900 mb-2">Tron Canvas</h1>
+          <p class="text-sm text-gray-600">Configuration des paramètres</p>
+        </div>
+        
+        <!-- Section Animation -->
+        <div class="space-y-4">
+          <div class="border-b border-gray-200 pb-2">
+            <h3 class="text-lg font-semibold text-gray-800">Animation</h3>
+          </div>
+          
+          <!-- Bouton Principal d'Animation -->
+          <button id="launchAnimationBtn" class="w-full bg-gray-900 hover:bg-gray-800 text-white font-medium py-3 px-4 rounded-md transition-colors duration-200 disabled:bg-gray-400 disabled:cursor-not-allowed">
+            <span id="launchBtnText">Lancer l'Animation</span>
+          </button>
+          
+          <!-- Mode d'Animation -->
+          <div class="space-y-2">
+            <label class="text-sm font-medium text-gray-700">Mode d'Animation</label>
+            <select id="animationMode" class="w-full bg-white border border-gray-300 rounded-md px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-transparent">
+              <option value="simultaneous">Simultané</option>
+              <option value="sequential">Séquentiel</option>
+              <option value="static">Statique</option>
+            </select>
+          </div>
+          
+          <!-- Vitesse d'Animation -->
+          <div class="space-y-2">
+            <label class="text-sm font-medium text-gray-700">Vitesse</label>
+            <select id="animationSpeed" class="w-full bg-white border border-gray-300 rounded-md px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-transparent">
+              <option value="very-fast">Très Rapide</option>
+              <option value="fast">Rapide</option>
+              <option value="normal" selected>Normal</option>
+              <option value="slow">Lent</option>
+            </select>
+          </div>
+          
+          <!-- Durée d'Animation (ms) -->
+          <div class="space-y-2">
+            <label class="text-sm font-medium text-gray-700">Durée (ms)</label>
+            <div class="flex items-center space-x-3">
+              <input type="range" id="animationDuration" min="500" max="5000" step="100" value="2000" class="flex-1 slider">
+              <span id="durationValue" class="text-xs bg-gray-100 px-2 py-1 rounded min-w-[60px] text-center font-mono">2000ms</span>
+            </div>
+          </div>
+          
+          <!-- Épaisseur des Lignes -->
+          <div class="space-y-2">
+            <label class="text-sm font-medium text-gray-700">Épaisseur</label>
+            <div class="flex items-center space-x-3">
+              <input type="range" id="lineWidth" min="1" max="8" step="1" value="2" class="flex-1 slider">
+              <span id="lineWidthValue" class="text-xs bg-gray-100 px-2 py-1 rounded min-w-[40px] text-center font-mono">2px</span>
+            </div>
+          </div>
+          
+          <!-- Options d'Animation -->
+          <div class="space-y-2">
+            <div class="flex items-center space-x-2">
+              <input type="checkbox" id="showEndCircles" checked class="w-4 h-4 text-gray-600 border-gray-300 rounded focus:ring-gray-500">
+              <label for="showEndCircles" class="text-sm text-gray-700">Afficher cercles de fin</label>
+            </div>
+            <div class="flex items-center space-x-2">
+              <input type="checkbox" id="clearFirst" checked class="w-4 h-4 text-gray-600 border-gray-300 rounded focus:ring-gray-500">
+              <label for="clearFirst" class="text-sm text-gray-700">Nettoyer avant animation</label>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Section Chemins -->
+        <div class="space-y-4">
+          <div class="border-b border-gray-200 pb-2">
+            <h3 class="text-lg font-semibold text-gray-800">Chemins</h3>
+          </div>
+          
+          <!-- Nombre de Chemins -->
+          <div class="space-y-2">
+            <label class="text-sm font-medium text-gray-700">Nombre de Chemins</label>
+            <div class="flex items-center space-x-3">
+              <input type="range" id="numberOfPaths" min="1" max="30" step="1" value="12" class="flex-1 slider">
+              <span id="pathCountValue" class="text-xs bg-gray-100 px-2 py-1 rounded min-w-[40px] text-center font-mono">12</span>
+            </div>
+          </div>
+          
+          <!-- Couleur des Chemins -->
+          <div class="space-y-2">
+            <label class="text-sm font-medium text-gray-700">Couleur Normale</label>
+            <div class="flex items-center space-x-3">
+              <input type="color" id="pathColor" value="#ff6b35" class="w-12 h-8 rounded border border-gray-300 cursor-pointer">
+              <span class="text-xs text-gray-500">Couleur des chemins normaux</span>
+            </div>
+          </div>
+          
+          <!-- Couleur Tron -->
+          <div class="space-y-2">
+            <label class="text-sm font-medium text-gray-700">Couleur Tron</label>
+            <div class="flex items-center space-x-3">
+              <input type="color" id="tronColor" value="#00bfff" class="w-12 h-8 rounded border border-gray-300 cursor-pointer">
+              <span class="text-xs text-gray-500">Couleur des effets Tron</span>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Section Grille -->
+        <div class="space-y-4">
+          <div class="border-b border-gray-200 pb-2">
+            <h3 class="text-lg font-semibold text-gray-800">Grille</h3>
+          </div>
+          
+          <!-- Affichage Grille -->
+          <div class="flex items-center space-x-2">
+            <input type="checkbox" id="showGrid" class="w-4 h-4 text-gray-600 border-gray-300 rounded focus:ring-gray-500">
+            <label for="showGrid" class="text-sm text-gray-700">Afficher la grille</label>
+          </div>
+          
+          <!-- Taille Grille Width -->
+          <div class="space-y-2">
+            <label class="text-sm font-medium text-gray-700">Taille Grille (Largeur)</label>
+            <div class="flex items-center space-x-3">
+              <input type="range" id="gridSizeWidth" min="20" max="100" step="5" value="50" class="flex-1 slider">
+              <span id="gridWidthValue" class="text-xs bg-gray-100 px-2 py-1 rounded min-w-[40px] text-center font-mono">50</span>
+            </div>
+          </div>
+          
+          <!-- Taille Grille Height -->
+          <div class="space-y-2">
+            <label class="text-sm font-medium text-gray-700">Taille Grille (Hauteur)</label>
+            <div class="flex items-center space-x-3">
+              <input type="range" id="gridSizeHeight" min="20" max="100" step="5" value="50" class="flex-1 slider">
+              <span id="gridHeightValue" class="text-xs bg-gray-100 px-2 py-1 rounded min-w-[40px] text-center font-mono">50</span>
+            </div>
+          </div>
+          
+          <!-- Dead Zone Width -->
+          <div class="space-y-2">
+            <label class="text-sm font-medium text-gray-700">Zone Morte (Largeur)</label>
+            <div class="flex items-center space-x-3">
+              <input type="range" id="deadZoneWidth" min="100" max="400" step="10" value="200" class="flex-1 slider">
+              <span id="deadZoneWidthValue" class="text-xs bg-gray-100 px-2 py-1 rounded min-w-[50px] text-center font-mono">200</span>
+            </div>
+          </div>
+          
+          <!-- Dead Zone Height -->
+          <div class="space-y-2">
+            <label class="text-sm font-medium text-gray-700">Zone Morte (Hauteur)</label>
+            <div class="flex items-center space-x-3">
+              <input type="range" id="deadZoneHeight" min="100" max="300" step="10" value="150" class="flex-1 slider">
+              <span id="deadZoneHeightValue" class="text-xs bg-gray-100 px-2 py-1 rounded min-w-[50px] text-center font-mono">150</span>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Section Utilitaires -->
+        <div class="space-y-4">
+          <div class="border-b border-gray-200 pb-2">
+            <h3 class="text-lg font-semibold text-gray-800">Utilitaires</h3>
+          </div>
+          
+          <!-- Actions Utilitaires -->
+          <div class="grid grid-cols-1 gap-2">
+            <button id="showStatsBtn" class="bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium py-2 px-3 rounded-md text-sm transition-colors">
+              Statistiques
+            </button>
+            <button id="demonstrateSpeedsBtn" class="bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium py-2 px-3 rounded-md text-sm transition-colors">
+              Demo Vitesses
+            </button>
+            <button id="resetConfigBtn" class="bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium py-2 px-3 rounded-md text-sm transition-colors">
+              Reset Config
+            </button>
+          </div>
+        </div>
+        
       </div>
     </div>
     
-    <div class="text-white text-sm max-w-md text-center">
-      <p><strong>Auto Mode:</strong> Generate random paths from deadzone border to canvas border</p>
-      <p><strong>Tron Mode:</strong> Animate paths with neon blue Tron-style effects</p>
-      <p><strong>Speed Control:</strong> Test different animation speeds from very fast to slow</p>
+    <!-- Zone Canvas à Droite -->
+    <div class="flex-1 flex flex-col items-center justify-center p-8 bg-gray-50">
+      
+      <!-- Informations -->
+      <div class="text-center mb-6 max-w-2xl">
+        <h2 class="text-xl font-bold text-gray-900 mb-2">Canvas Tron Pathfinding</h2>
+        <p class="text-sm text-gray-600">
+          Configurez les paramètres dans le panneau de gauche et cliquez sur "Lancer l'Animation" pour voir le résultat.
+        </p>
+        <div id="statusIndicator" class="mt-2 text-xs text-gray-500">
+          Prêt à lancer une animation
+        </div>
+      </div>
+      
+      <!-- Canvas avec position relative pour le SVG overlay -->
+      <div class="relative">
+        <canvas id="canvas" width="600" height="600" class="bg-black border border-gray-300 rounded-lg shadow-lg"></canvas>
+        
+        <!-- SVG Logo Tron positionné au centre du canvas -->
+        <div id="tron-logo">
+          <svg width="1001" height="236" viewBox="0 0 1001 236" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path fill-rule="evenodd" clip-rule="evenodd" d="M93 10V59.5L86 67H7.5L1 59.5V9L8 2H85.5L93 10ZM13 14V55H81V14H13Z" fill="#FCFEFF" class="svg-elem-1"></path>
+            <path fill-rule="evenodd" clip-rule="evenodd" d="M174 72V227.5L166.5 235H113.5L106 227.5V72C107 18.5 155.5 2 161.5 2H437C464.5 2 506 25.5 506 67H177.5C177.5 67 174 68 174 72ZM118 224V72C118 34.5 150 14 171 14H430.5C471.5 14 489 44 491 55H175.5C173 55 162 61 162 72V224H118Z" fill="#FCFEFF" class="svg-elem-2"></path>
+            <path fill-rule="evenodd" clip-rule="evenodd" d="M93 10V59.5L86 67H7.5L1 59.5V9L8 2H85.5L93 10ZM13 14V55H81V14H13Z" stroke="#5AAFF0" stroke-width="2" class="svg-elem-3"></path>
+            <path fill-rule="evenodd" clip-rule="evenodd" d="M174 72V227.5L166.5 235H113.5L106 227.5V72C107 18.5 155.5 2 161.5 2H437C464.5 2 506 25.5 506 67H177.5C177.5 67 174 68 174 72ZM118 224V72C118 34.5 150 14 171 14H430.5C471.5 14 489 44 491 55H175.5C173 55 162 61 162 72V224H118Z" stroke="#5AAFF0" stroke-width="2" class="svg-elem-4"></path>
+            <path d="M504.894 87C502.432 109.844 491.356 125.382 477.721 135.381C463.84 145.56 447.29 150.007 434.462 150.501L433.5 150.538V152.923L433.803 153.217L505 222.422V234H430.924L337.5 137.595V94.3945L344.433 87H504.894ZM317.086 87L324 93.9141V227.086L317.086 234H264.914L258 227.086V93.9141L264.914 87H317.086ZM268 224H314V97H268V224ZM347 134.414L436.586 224H491.925L490.205 222.291L408.425 141H433C440.925 141 453.097 138.454 464.561 131.867C476.044 125.269 486.864 114.585 491.954 98.2979L492.36 97H347V134.414Z" fill="#FCFEFF" stroke="#5AAFF0" stroke-width="2" class="svg-elem-5"></path>
+            <path d="M632 3C697.19 3 750 54.731 750 118.5C750 182.269 697.19 234 632 234C566.81 234 514 182.269 514 118.5C514 54.731 566.81 3 632 3ZM632.5 13C572.599 13 524 60.4358 524 119C524 177.564 592.599 225 632.5 225C692.401 225 741 177.564 741 119C741 60.4358 692.401 13 632.5 13ZM633 58C667.809 58 696 85.7731 696 120C696 154.227 667.809 182 633 182C598.191 182 570 154.227 570 120C570 85.7731 598.191 58 633 58ZM633 68C603.747 68 580 91.263 580 120C580 148.737 603.747 172 633 172C662.253 172 686 148.737 686 120C686 91.263 662.253 68 633 68Z" fill="#FCFEFF" stroke="#5AAFF0" stroke-width="2" class="svg-elem-6"></path>
+            <path fill-rule="evenodd" clip-rule="evenodd" d="M760 228V9L766.5 2H794L878 96V133L871 140H826V228L819 235H767L760 228ZM771 224H815V129H867V101L790 13H771V224Z" fill="#FCFEFF" class="svg-elem-7"></path>
+            <path fill-rule="evenodd" clip-rule="evenodd" d="M1000 8V227L993.5 234H966L882 140V103L889 96H934V8L941 1H993L1000 8ZM989 12H945V107H893V135L970 223H989V12Z" fill="#FCFEFF" class="svg-elem-8"></path>
+            <path fill-rule="evenodd" clip-rule="evenodd" d="M760 228V9L766.5 2H794L878 96V133L871 140H826V228L819 235H767L760 228ZM771 224H815V129H867V101L790 13H771V224Z" stroke="#5AAFF0" stroke-width="2" class="svg-elem-9"></path>
+            <path fill-rule="evenodd" clip-rule="evenodd" d="M1000 8V227L993.5 234H966L882 140V103L889 96H934V8L941 1H993L1000 8ZM989 12H945V107H893V135L970 223H989V12Z" stroke="#5AAFF0" stroke-width="2" class="svg-elem-10"></path>
+          </svg>
+        </div>
+      </div>
+      
+      <!-- Status et aide -->
+      <div class="mt-6 text-center text-xs text-gray-500 max-w-md">
+        <p>Les paramètres sont mis à jour en arrière-plan. Cliquez sur "Lancer l'Animation" pour appliquer les changements.</p>
+      </div>
+      
     </div>
   </div>
 `
@@ -85,56 +269,39 @@ function fitSvgInDeadzone(deadZone: {basePoint: {x: number, y: number}, deadZone
   
   if (!tronLogo || !tronSvg || !canvas) return
   
-  // Dimensions originales du SVG
   const svgOriginalWidth = 1001
   const svgOriginalHeight = 236
   const svgAspectRatio = svgOriginalWidth / svgOriginalHeight
   
-  // Dimensions de la deadzone avec une marge de sécurité minimale
-  const availableWidth = deadZone.deadZoneWidth * 0.95  // 95% pour maximiser l'utilisation
+  const availableWidth = deadZone.deadZoneWidth * 0.95
   const availableHeight = deadZone.deadZoneHeight * 0.95
   const deadzoneAspectRatio = availableWidth / availableHeight
   
   let finalWidth: number
   let finalHeight: number
   
-  // Calcul du ratio optimal pour fitting sans déformation
   if (svgAspectRatio > deadzoneAspectRatio) {
-    // SVG plus large que la deadzone proportionnellement -> contrainte par la largeur
     finalWidth = availableWidth
     finalHeight = availableWidth / svgAspectRatio
-    console.log('📐 SVG contrainte par la largeur')
   } else {
-    // SVG plus haut que la deadzone proportionnellement -> contrainte par la hauteur  
     finalHeight = availableHeight
     finalWidth = availableHeight * svgAspectRatio
-    console.log('📐 SVG contrainte par la hauteur')
   }
   
-  // Position centrée dans la deadzone (coordonnées relatives au canvas)
-  // Le canvas est à (0,0) dans son conteneur relatif
   const centerX = deadZone.basePoint.x
   const centerY = deadZone.basePoint.y
   const left = centerX - finalWidth / 2
   const top = centerY - finalHeight / 2
   
-  // Application des styles au conteneur (position absolue relative au conteneur du canvas)
   tronLogo.style.position = 'absolute'
   tronLogo.style.left = `${left}px`
   tronLogo.style.top = `${top}px`
   tronLogo.style.width = `${finalWidth}px`
   tronLogo.style.height = `${finalHeight}px`
   
-  // S'assurer que le SVG remplisse complètement son conteneur
   tronSvg.style.width = '100%'
   tronSvg.style.height = '100%'
   tronSvg.setAttribute('preserveAspectRatio', 'xMidYMid meet')
-  
-  console.log(`📊 Deadzone: ${deadZone.deadZoneWidth}x${deadZone.deadZoneHeight} au centre (${deadZone.basePoint.x}, ${deadZone.basePoint.y})`)
-  console.log(`📊 Espace disponible: ${availableWidth.toFixed(1)}x${availableHeight.toFixed(1)}`)
-  console.log(`📊 SVG calculé: ${finalWidth.toFixed(1)}x${finalHeight.toFixed(1)}`)
-  console.log(`📊 Position finale: (${left.toFixed(1)}, ${top.toFixed(1)})`)
-  console.log(`📊 Ratio SVG: ${svgAspectRatio.toFixed(2)} vs Ratio deadzone: ${deadzoneAspectRatio.toFixed(2)}`)
 }
 
 // Fonction pour nettoyer/masquer le logo SVG
@@ -146,40 +313,30 @@ function hideTronLogo(): void {
     tronLogo.classList.remove('show')
     tronSvg.classList.remove('active')
     
-    // Forcer la réinitialisation des propriétés d'animation sur tous les éléments SVG
     const svgElements = tronSvg.querySelectorAll('[class*="svg-elem-"]')
     svgElements.forEach(element => {
       const el = element as HTMLElement
       el.style.animation = 'none'
       el.style.transition = 'none'
     })
-    
-    console.log('🧹 Logo SVG masqué et animation réinitialisée')
   }
 }
 
 // Fonction pour déclencher l'animation du logo Tron
 function triggerTronLogoAnimation(deadZone?: {basePoint: {x: number, y: number}, deadZoneWidth: number, deadZoneHeight: number}): void {
-  console.log('🎨 Déclenchement de l\'animation du logo Tron')
   const tronLogo = document.getElementById('tron-logo')
   const tronSvg = tronLogo?.querySelector('svg')
   
   if (!tronLogo || !tronSvg) return
   
-  // Calculer et positionner le SVG si les paramètres de deadzone sont fournis
   if (deadZone) {
     fitSvgInDeadzone(deadZone)
   }
   
-  // Réinitialisation complète : masquer et supprimer toutes les classes
   hideTronLogo()
-  
-  // Forcer le reflow pour s'assurer que les styles sont appliqués
   tronLogo.offsetHeight
   
-  // Attendre un peu puis réactiver les transitions et l'animation
   setTimeout(() => {
-    // Réactiver les transitions CSS sur tous les éléments SVG
     const svgElements = tronSvg.querySelectorAll('[class*="svg-elem-"]')
     svgElements.forEach(element => {
       const el = element as HTMLElement
@@ -187,82 +344,275 @@ function triggerTronLogoAnimation(deadZone?: {basePoint: {x: number, y: number},
       el.style.transition = ''
     })
     
-    // Forcer un autre reflow pour s'assurer que les transitions sont réactivées
     tronSvg.getBoundingClientRect()
-    
-    // Maintenant afficher le logo et déclencher l'animation
     tronLogo.classList.add('show')
     
-    // Déclencher l'animation SVG après un mini délai pour s'assurer que le logo est visible
     setTimeout(() => {
       tronSvg.classList.add('active')
-      console.log('✨ Animation SVG déclenchée avec les transitions CSS')
     }, 50)
     
-  }, 200) // Délai plus long pour une réinitialisation complète
+  }, 200)
 }
 
-const canvas = CanvasManager.initCanvas()
-canvas.initGrid(50, 50, 200, 150, {x: 300, y: 300})
+// Fonction pour mettre à jour le statut
+function updateStatus(message: string): void {
+  const statusElement = document.getElementById('statusIndicator')
+  if (statusElement) {
+    statusElement.textContent = message
+  }
+}
+
+// Fonction pour lancer l'animation avec la configuration actuelle
+function launchAnimation(): void {
+  if (isAnimating) {
+    updateStatus('Animation en cours... Veuillez patienter')
+    return
+  }
+
+  isAnimating = true
+  updateStatus('Génération des chemins...')
+  
+  // Désactiver le bouton et changer son texte
+  const launchBtn = document.getElementById('launchAnimationBtn') as HTMLButtonElement
+  const launchBtnText = document.getElementById('launchBtnText')!
+  launchBtn.disabled = true
+  launchBtnText.textContent = 'Animation en cours...'
+  
+  // Effacer le canvas
+  canvas.getRenderer().clear()
+  
+  // Appliquer la nouvelle configuration
+  canvas.initGrid(
+    currentConfig.grid.sizeWidth,
+    currentConfig.grid.sizeHeight,
+    currentConfig.grid.deadZoneWidth,
+    currentConfig.grid.deadZoneHeight,
+    { x: currentConfig.grid.centerX, y: currentConfig.grid.centerY }
+  )
+  
+  // Régénérer les chemins
+  canvas.setRandomPaths(currentConfig.paths.numberOfPaths)
+  
+  updateStatus('Lancement de l\'animation...')
+  
+  const deadZone = canvas.getGridManager().getDeadZone()
+  
+  // Callback à la fin de l'animation
+  const onComplete = () => {
+    isAnimating = false
+    launchBtn.disabled = false
+    launchBtnText.textContent = 'Lancer l\'Animation'
+    updateStatus('Animation terminée - Prêt pour une nouvelle animation')
+  }
+  
+  // Lancer l'animation selon le mode sélectionné
+  switch (currentConfig.animation.mode) {
+    case 'simultaneous':
+      switch (currentConfig.animation.speed) {
+        case 'very-fast':
+          canvas.animateTronPathsVeryFast(currentConfig.animation.lineWidth, currentConfig.animation.clearFirst, onComplete)
+          break
+        case 'fast':
+          canvas.animateTronPathsFast(currentConfig.animation.lineWidth, currentConfig.animation.clearFirst, onComplete)
+          break
+        case 'normal':
+          canvas.animateTronPathsNormal(currentConfig.animation.lineWidth, currentConfig.animation.clearFirst, onComplete)
+          break
+        case 'slow':
+          canvas.animateTronPathsSlow(currentConfig.animation.lineWidth, currentConfig.animation.clearFirst, onComplete)
+          break
+      }
+      break
+    
+    case 'sequential':
+      canvas.animateTronPathsSequentially(
+        currentConfig.animation.lineWidth,
+        currentConfig.animation.duration / currentConfig.paths.numberOfPaths,
+        100,
+        currentConfig.animation.clearFirst,
+        onComplete
+      )
+      break
+    
+    case 'static':
+      canvas.drawTronPaths(currentConfig.animation.lineWidth, currentConfig.animation.showEndCircles)
+      onComplete()
+      break
+  }
+  
+  // Déclencher l'animation du logo
+  if (deadZone) {
+    triggerTronLogoAnimation(deadZone)
+  }
+}
+
+// Initialisation du canvas - NOIR au démarrage
+canvas = CanvasManager.initCanvas()
+canvas.initGrid(
+  currentConfig.grid.sizeWidth,
+  currentConfig.grid.sizeHeight,
+  currentConfig.grid.deadZoneWidth,
+  currentConfig.grid.deadZoneHeight,
+  { x: currentConfig.grid.centerX, y: currentConfig.grid.centerY }
+)
 canvas.setupInteractivePathfinding()
-canvas.drawRandomPaths()
+// PAS d'affichage initial - canvas reste noir
 
-// Event listeners pour les nouveaux boutons Tron avec animation du logo
-document.getElementById('testTronBtn')?.addEventListener('click', () => {
-  console.log('🚀 Lancement de la démonstration Tron complète')
-  canvas.demonstrateTronFeatures()
+// === EVENT LISTENERS ===
+
+// Bouton principal d'animation
+document.getElementById('launchAnimationBtn')?.addEventListener('click', launchAnimation)
+
+// TOUS LES AUTRES EVENT LISTENERS - MISE À JOUR EN ARRIÈRE-PLAN SEULEMENT
+
+// Mode d'animation
+document.getElementById('animationMode')?.addEventListener('change', (e) => {
+  currentConfig.animation.mode = (e.target as HTMLSelectElement).value as any
+  updateStatus('Configuration mise à jour')
 })
 
-document.getElementById('tronSimultaneousBtn')?.addEventListener('click', () => {
-  console.log('🎬 Test animation simultanée')
-  canvas.testTronAnimation('simultaneous')
+// Vitesse d'animation
+document.getElementById('animationSpeed')?.addEventListener('change', (e) => {
+  currentConfig.animation.speed = (e.target as HTMLSelectElement).value as any
+  updateStatus('Configuration mise à jour')
 })
 
-document.getElementById('tronSequentialBtn')?.addEventListener('click', () => {
-  console.log('🎬 Test animation séquentielle')
-  canvas.testTronAnimation('sequential')
+// Durée d'animation
+document.getElementById('animationDuration')?.addEventListener('input', (e) => {
+  currentConfig.animation.duration = parseInt((e.target as HTMLInputElement).value)
+  document.getElementById('durationValue')!.textContent = `${currentConfig.animation.duration}ms`
+  updateStatus('Configuration mise à jour')
 })
 
-document.getElementById('tronStaticBtn')?.addEventListener('click', () => {
-  console.log('🎨 Test affichage statique Tron')
-  canvas.testTronAnimation('static')
+// Épaisseur des lignes
+document.getElementById('lineWidth')?.addEventListener('input', (e) => {
+  currentConfig.animation.lineWidth = parseInt((e.target as HTMLInputElement).value)
+  document.getElementById('lineWidthValue')!.textContent = `${currentConfig.animation.lineWidth}px`
+  updateStatus('Configuration mise à jour')
 })
 
-// Event listeners pour les nouvelles vitesses d'animation avec logo
-document.getElementById('tronVeryFastBtn')?.addEventListener('click', () => {
-  console.log('⚡ Test animation très rapide')
-  canvas.testTronAnimation('very-fast')
+// Nombre de chemins
+document.getElementById('numberOfPaths')?.addEventListener('input', (e) => {
+  currentConfig.paths.numberOfPaths = parseInt((e.target as HTMLInputElement).value)
+  document.getElementById('pathCountValue')!.textContent = `${currentConfig.paths.numberOfPaths}`
+  updateStatus('Configuration mise à jour')
 })
 
-document.getElementById('tronFastBtn')?.addEventListener('click', () => {
-  console.log('🚀 Test animation rapide')
-  canvas.testTronAnimation('fast')
+// Couleur des chemins
+document.getElementById('pathColor')?.addEventListener('input', (e) => {
+  currentConfig.paths.color = (e.target as HTMLInputElement).value
+  updateStatus('Configuration mise à jour')
 })
 
-document.getElementById('tronNormalBtn')?.addEventListener('click', () => {
-  console.log('🚶 Test animation normale')
-  canvas.testTronAnimation('normal')
+// Couleur Tron
+document.getElementById('tronColor')?.addEventListener('input', (e) => {
+  currentConfig.paths.tronColor = (e.target as HTMLInputElement).value
+  updateStatus('Configuration mise à jour')
 })
 
-document.getElementById('tronSlowBtn')?.addEventListener('click', () => {
-  console.log('🐌 Test animation lente')
-  canvas.testTronAnimation('slow')
+// Affichage grille
+document.getElementById('showGrid')?.addEventListener('change', (e) => {
+  currentConfig.grid.visible = (e.target as HTMLInputElement).checked
+  updateStatus('Configuration mise à jour')
+})
+
+// Taille grille largeur
+document.getElementById('gridSizeWidth')?.addEventListener('input', (e) => {
+  currentConfig.grid.sizeWidth = parseInt((e.target as HTMLInputElement).value)
+  document.getElementById('gridWidthValue')!.textContent = `${currentConfig.grid.sizeWidth}`
+  updateStatus('Configuration mise à jour')
+})
+
+// Taille grille hauteur
+document.getElementById('gridSizeHeight')?.addEventListener('input', (e) => {
+  currentConfig.grid.sizeHeight = parseInt((e.target as HTMLInputElement).value)
+  document.getElementById('gridHeightValue')!.textContent = `${currentConfig.grid.sizeHeight}`
+  updateStatus('Configuration mise à jour')
+})
+
+// Dead zone largeur
+document.getElementById('deadZoneWidth')?.addEventListener('input', (e) => {
+  currentConfig.grid.deadZoneWidth = parseInt((e.target as HTMLInputElement).value)
+  document.getElementById('deadZoneWidthValue')!.textContent = `${currentConfig.grid.deadZoneWidth}`
+  updateStatus('Configuration mise à jour')
+})
+
+// Dead zone hauteur
+document.getElementById('deadZoneHeight')?.addEventListener('input', (e) => {
+  currentConfig.grid.deadZoneHeight = parseInt((e.target as HTMLInputElement).value)
+  document.getElementById('deadZoneHeightValue')!.textContent = `${currentConfig.grid.deadZoneHeight}`
+  updateStatus('Configuration mise à jour')
+})
+
+// Options d'animation
+document.getElementById('showEndCircles')?.addEventListener('change', (e) => {
+  currentConfig.animation.showEndCircles = (e.target as HTMLInputElement).checked
+  updateStatus('Configuration mise à jour')
+})
+
+document.getElementById('clearFirst')?.addEventListener('change', (e) => {
+  currentConfig.animation.clearFirst = (e.target as HTMLInputElement).checked
+  updateStatus('Configuration mise à jour')
+})
+
+// Utilitaires
+document.getElementById('showStatsBtn')?.addEventListener('click', () => {
+  const stats = canvas.getRandomPathsStats()
+  alert(`Statistiques:\n\nNombre de chemins: ${stats.totalPaths}\nPoints deadzone disponibles: ${stats.deadzonePointsAvailable}\nPoints canvas disponibles: ${stats.canvasPointsAvailable}`)
 })
 
 document.getElementById('demonstrateSpeedsBtn')?.addEventListener('click', () => {
-  console.log('🎬 Démonstration de toutes les vitesses')
-  canvas.demonstrateAnimationSpeeds()
+  if (!isAnimating) {
+    canvas.demonstrateAnimationSpeeds()
+  }
 })
 
-// Exposer les fonctions pour qu'elles soient accessibles depuis CanvasManager
+document.getElementById('resetConfigBtn')?.addEventListener('click', () => {
+  currentConfig = {
+    grid: { ...defaultConfig.grid },
+    animation: { ...defaultConfig.animation },
+    paths: { ...defaultConfig.paths },
+    rendering: { ...defaultConfig.rendering }
+  }
+  
+  // Mettre à jour tous les contrôles
+  (document.getElementById('animationMode') as HTMLSelectElement).value = currentConfig.animation.mode;
+  (document.getElementById('animationSpeed') as HTMLSelectElement).value = currentConfig.animation.speed;
+  (document.getElementById('animationDuration') as HTMLInputElement).value = currentConfig.animation.duration.toString();
+  (document.getElementById('lineWidth') as HTMLInputElement).value = currentConfig.animation.lineWidth.toString();
+  (document.getElementById('numberOfPaths') as HTMLInputElement).value = currentConfig.paths.numberOfPaths.toString();
+  (document.getElementById('pathColor') as HTMLInputElement).value = currentConfig.paths.color;
+  (document.getElementById('tronColor') as HTMLInputElement).value = currentConfig.paths.tronColor;
+  (document.getElementById('showGrid') as HTMLInputElement).checked = currentConfig.grid.visible;
+  (document.getElementById('gridSizeWidth') as HTMLInputElement).value = currentConfig.grid.sizeWidth.toString();
+  (document.getElementById('gridSizeHeight') as HTMLInputElement).value = currentConfig.grid.sizeHeight.toString();
+  (document.getElementById('deadZoneWidth') as HTMLInputElement).value = currentConfig.grid.deadZoneWidth.toString();
+  (document.getElementById('deadZoneHeight') as HTMLInputElement).value = currentConfig.grid.deadZoneHeight.toString();
+  (document.getElementById('showEndCircles') as HTMLInputElement).checked = currentConfig.animation.showEndCircles;
+  (document.getElementById('clearFirst') as HTMLInputElement).checked = currentConfig.animation.clearFirst;
+  
+  // Mettre à jour les valeurs affichées
+  document.getElementById('durationValue')!.textContent = `${currentConfig.animation.duration}ms`;
+  document.getElementById('lineWidthValue')!.textContent = `${currentConfig.animation.lineWidth}px`;
+  document.getElementById('pathCountValue')!.textContent = `${currentConfig.paths.numberOfPaths}`;
+  document.getElementById('gridWidthValue')!.textContent = `${currentConfig.grid.sizeWidth}`;
+  document.getElementById('gridHeightValue')!.textContent = `${currentConfig.grid.sizeHeight}`;
+  document.getElementById('deadZoneWidthValue')!.textContent = `${currentConfig.grid.deadZoneWidth}`;
+  document.getElementById('deadZoneHeightValue')!.textContent = `${currentConfig.grid.deadZoneHeight}`;
+  
+  updateStatus('Configuration réinitialisée')
+})
+
+// Exposer les fonctions globales
 declare global {
   interface Window {
     triggerTronLogoAnimation: (deadZone?: {basePoint: {x: number, y: number}, deadZoneWidth: number, deadZoneHeight: number}) => void;
     hideTronLogo: () => void;
+    currentConfig: typeof currentConfig;
   }
 }
 window.triggerTronLogoAnimation = triggerTronLogoAnimation
 window.hideTronLogo = hideTronLogo
+window.currentConfig = currentConfig
 
-// Exemple d'utilisation avec durée personnalisée (utilisable dans la console)
-// canvas.testTronAnimationWithDuration(3000) // Animation de 3 secondes
+console.log('🚀 Interface Tron Canvas initialisée - Canvas noir au démarrage')
