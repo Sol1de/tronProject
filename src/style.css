@@ -260,8 +260,13 @@ button:active {
 }
 
 /* Bouton principal simple */
+#launchAnimationBtn {
+  color: #000000 !important; /* text-white */
+}
+
 #launchAnimationBtn:hover:not(:disabled) {
-  background-color: #1f2937;
+  background-color: #374151 !important; /* hover:bg-gray-700 */
+  color: #ffffff !important; /* hover:text-white */
 }
 
 #launchAnimationBtn:disabled {
@@ -269,6 +274,7 @@ button:active {
   cursor: not-allowed;
   transform: none;
   box-shadow: none;
+  color: #ffffff !important; /* disabled:text-white */
 }
 
 /* Values en monospace */

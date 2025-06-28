@@ -55,8 +55,8 @@ document.querySelector<HTMLDivElement>('#app')!.innerHTML = /*html*/`
           </div>
           
           <!-- Bouton Principal d'Animation -->
-          <button id="launchAnimationBtn" class="w-full bg-gray-900 hover:bg-gray-700 text-white font-medium py-3 px-4 rounded-md transition-colors duration-200 disabled:bg-gray-400 disabled:cursor-not-allowed">
-            <span id="launchBtnText">Lancer l'Animation</span>
+          <button id="launchAnimationBtn" class="w-full bg-gray-900 hover:bg-gray-700 text-white hover:text-white font-medium py-3 px-4 rounded-md transition-all duration-200 disabled:bg-gray-400 disabled:cursor-not-allowed disabled:text-white">
+            <span id="launchBtnText" class="text-black hover:text-white">Lancer l'Animation</span>
           </button>
           
           <!-- Mode d'Animation -->
