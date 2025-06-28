@@ -16,7 +16,6 @@ const defaultConfig = {
   },
   animation: {
     mode: 'simultaneous' as 'simultaneous' | 'sequential' | 'static',
-    speed: 'normal' as 'very-fast' | 'fast' | 'normal' | 'slow',
     duration: 2000,
     lineWidth: 2
   },
@@ -65,17 +64,6 @@ document.querySelector<HTMLDivElement>('#app')!.innerHTML = /*html*/`
               <option value="simultaneous">Simultané</option>
               <option value="sequential">Séquentiel</option>
               <option value="static">Statique</option>
-            </select>
-          </div>
-          
-          <!-- Vitesse d'Animation -->
-          <div class="space-y-2">
-            <label class="text-sm font-medium text-gray-700">Vitesse</label>
-            <select id="animationSpeed" class="w-full bg-white border border-gray-300 rounded-md px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-transparent">
-              <option value="very-fast">Très Rapide</option>
-              <option value="fast">Rapide</option>
-              <option value="normal" selected>Normal</option>
-              <option value="slow">Lent</option>
             </select>
           </div>
           
@@ -375,20 +363,14 @@ function launchAnimation(): void {
       // Lancer l'animation selon le mode sélectionné avec les couleurs de la config
     switch (currentConfig.animation.mode) {
       case 'simultaneous':
-        switch (currentConfig.animation.speed) {
-          case 'very-fast':
-            canvas.animateTronPathsVeryFast(currentConfig.animation.lineWidth, true, onComplete, currentConfig.paths.tronColor)
-            break
-          case 'fast':
-            canvas.animateTronPathsFast(currentConfig.animation.lineWidth, true, onComplete, currentConfig.paths.tronColor)
-            break
-          case 'normal':
-            canvas.animateTronPathsNormal(currentConfig.animation.lineWidth, true, onComplete, currentConfig.paths.tronColor)
-            break
-          case 'slow':
-            canvas.animateTronPathsSlow(currentConfig.animation.lineWidth, true, onComplete, currentConfig.paths.tronColor)
-            break
-        }
+        // Utiliser la durée configurée par l'utilisateur
+        canvas.animateTronPaths(
+          currentConfig.animation.lineWidth,
+          currentConfig.animation.duration,
+          true,
+          onComplete,
+          currentConfig.paths.tronColor
+        )
         break
       
       case 'sequential':
@@ -477,12 +459,6 @@ document.getElementById('animationMode')?.addEventListener('change', (e) => {
   updateStatus('Configuration mise à jour')
 })
 
-// Vitesse d'animation
-document.getElementById('animationSpeed')?.addEventListener('change', (e) => {
-  currentConfig.animation.speed = (e.target as HTMLSelectElement).value as any
-  updateStatus('Configuration mise à jour')
-})
-
 // Durée d'animation
 document.getElementById('animationDuration')?.addEventListener('input', (e) => {
   currentConfig.animation.duration = parseInt((e.target as HTMLInputElement).value)
@@ -560,7 +536,6 @@ document.getElementById('resetConfigBtn')?.addEventListener('click', () => {
   
   // Mettre à jour tous les contrôles
   (document.getElementById('animationMode') as HTMLSelectElement).value = currentConfig.animation.mode;
-  (document.getElementById('animationSpeed') as HTMLSelectElement).value = currentConfig.animation.speed;
   (document.getElementById('animationDuration') as HTMLInputElement).value = currentConfig.animation.duration.toString();
   (document.getElementById('lineWidth') as HTMLInputElement).value = currentConfig.animation.lineWidth.toString();
   (document.getElementById('tronColor') as HTMLInputElement).value = currentConfig.paths.tronColor;
