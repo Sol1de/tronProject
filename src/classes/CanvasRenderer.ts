@@ -87,14 +87,12 @@ export default class CanvasRenderer {
   }
 
   /**
-   * Dessine plusieurs chemins aléatoires avec des couleurs différentes
+   * Dessine plusieurs chemins aléatoires avec la couleur Tron
    */
-  public drawRandomPaths(randomPaths: RandomPath[], _strokeStyle: string = 'orange', lineWidth: number = 2): void {
+  public drawRandomPaths(randomPaths: RandomPath[], tronColor: string = '#00FFFF', lineWidth: number = 2): void {
     randomPaths.forEach((randomPath) => {
       if (randomPath.path) {
-        const colors = ['orange', 'cyan', 'magenta', 'lime', 'yellow', 'pink', 'lightblue', 'lightgreen']
-        const color = colors[Math.floor(Math.random() * colors.length)]
-        this.drawPath(randomPath.path, color, lineWidth)
+        this.drawPath(randomPath.path, tronColor, lineWidth)
       }
     })
   }

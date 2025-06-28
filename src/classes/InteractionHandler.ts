@@ -1,31 +1,23 @@
-import MathUtils from './MathUtils'
 import type GridManager from './GridManager'
-import type PathfindingEngine from './PathfindingEngine'
 import type RandomPathGenerator from './RandomPathGenerator'
 import type CanvasRenderer from './CanvasRenderer'
-import type { Point, RandomPath, StatisticsData } from '../types'
+import type { RandomPath, StatisticsData } from '../types'
 
 export default class InteractionHandler {
-  private canvas: HTMLCanvasElement
   private gridManager: GridManager
-  private pathfindingEngine: PathfindingEngine
   private randomPathGenerator: RandomPathGenerator
   private renderer: CanvasRenderer
   private onRedraw: () => void
   private randomPaths: RandomPath[]
 
   constructor(
-    canvas: HTMLCanvasElement,
     gridManager: GridManager,
-    pathfindingEngine: PathfindingEngine,
     randomPathGenerator: RandomPathGenerator,
     renderer: CanvasRenderer,
     onRedraw: () => void,
     randomPaths: RandomPath[]
   ) {
-    this.canvas = canvas
     this.gridManager = gridManager
-    this.pathfindingEngine = pathfindingEngine
     this.randomPathGenerator = randomPathGenerator
     this.renderer = renderer
     this.onRedraw = onRedraw
@@ -62,7 +54,7 @@ export default class InteractionHandler {
       
       // Redessiner
       this.onRedraw()
-      this.renderer.drawRandomPaths(this.randomPaths)
+      this.renderer.drawRandomPaths(this.randomPaths, '#00FFFF')
     })
   }
 

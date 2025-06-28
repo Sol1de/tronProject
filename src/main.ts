@@ -22,7 +22,6 @@ const defaultConfig = {
   },
   paths: {
     numberOfPaths: 12, // Sera mis à jour dynamiquement
-    color: '#ff6b35',
     tronColor: '#00bfff'
   }
 }
@@ -114,15 +113,6 @@ document.querySelector<HTMLDivElement>('#app')!.innerHTML = /*html*/`
             </div>
           </div>
           
-          <!-- Couleur des Chemins -->
-          <div class="space-y-2">
-            <label class="text-sm font-medium text-gray-700">Couleur Normale</label>
-            <div class="flex items-center space-x-3">
-              <input type="color" id="pathColor" value="#ff6b35" class="w-12 h-8 rounded border border-gray-300 cursor-pointer">
-              <span class="text-xs text-gray-500">Couleur des chemins normaux</span>
-            </div>
-          </div>
-          
           <!-- Couleur Tron -->
           <div class="space-y-2">
             <label class="text-sm font-medium text-gray-700">Couleur Tron</label>
@@ -201,16 +191,10 @@ document.querySelector<HTMLDivElement>('#app')!.innerHTML = /*html*/`
     
     <!-- Zone Canvas à Droite -->
     <div class="flex-1 flex flex-col items-center justify-center p-8 bg-gray-50">
-      
-      <!-- Informations -->
-      <div class="text-center mb-6 max-w-2xl">
-        <h2 class="text-xl font-bold text-gray-900 mb-2">Canvas Tron Pathfinding</h2>
-        <p class="text-sm text-gray-600">
-          Configurez les paramètres dans le panneau de gauche et cliquez sur "Lancer l'Animation" pour voir le résultat.
-        </p>
-        <div id="statusIndicator" class="mt-2 text-xs text-gray-500">
-          Prêt à lancer une animation
-        </div>
+
+      <!-- Status et aide -->
+      <div class="mt-6 text-center text-xs text-gray-500 max-w-md">
+        <p>Les paramètres sont mis à jour en arrière-plan. Cliquez sur "Lancer l'Animation" pour appliquer les changements.</p>
       </div>
       
       <!-- Canvas avec position relative pour le SVG overlay -->
@@ -232,11 +216,6 @@ document.querySelector<HTMLDivElement>('#app')!.innerHTML = /*html*/`
             <path fill-rule="evenodd" clip-rule="evenodd" d="M1000 8V227L993.5 234H966L882 140V103L889 96H934V8L941 1H993L1000 8ZM989 12H945V107H893V135L970 223H989V12Z" stroke="#5AAFF0" stroke-width="2" class="svg-elem-10"></path>
           </svg>
         </div>
-      </div>
-      
-      <!-- Status et aide -->
-      <div class="mt-6 text-center text-xs text-gray-500 max-w-md">
-        <p>Les paramètres sont mis à jour en arrière-plan. Cliquez sur "Lancer l'Animation" pour appliquer les changements.</p>
       </div>
       
     </div>
@@ -525,12 +504,6 @@ document.getElementById('numberOfPaths')?.addEventListener('input', (e) => {
   updateStatus('Configuration mise à jour')
 })
 
-// Couleur des chemins
-document.getElementById('pathColor')?.addEventListener('input', (e) => {
-  currentConfig.paths.color = (e.target as HTMLInputElement).value
-  updateStatus('Configuration mise à jour')
-})
-
 // Couleur Tron
 document.getElementById('tronColor')?.addEventListener('input', (e) => {
   currentConfig.paths.tronColor = (e.target as HTMLInputElement).value
@@ -583,14 +556,13 @@ document.getElementById('resetConfigBtn')?.addEventListener('click', () => {
   currentConfig.paths = { ...defaultConfig.paths }
   
   // Recalculer les optimaux et mettre à jour l'interface
-  updateDefaultValues()
+  updateDefaultValues();
   
   // Mettre à jour tous les contrôles
   (document.getElementById('animationMode') as HTMLSelectElement).value = currentConfig.animation.mode;
   (document.getElementById('animationSpeed') as HTMLSelectElement).value = currentConfig.animation.speed;
   (document.getElementById('animationDuration') as HTMLInputElement).value = currentConfig.animation.duration.toString();
   (document.getElementById('lineWidth') as HTMLInputElement).value = currentConfig.animation.lineWidth.toString();
-  (document.getElementById('pathColor') as HTMLInputElement).value = currentConfig.paths.color;
   (document.getElementById('tronColor') as HTMLInputElement).value = currentConfig.paths.tronColor;
   (document.getElementById('showGrid') as HTMLInputElement).checked = currentConfig.grid.visible;
   (document.getElementById('gridSizeWidth') as HTMLInputElement).value = currentConfig.grid.sizeWidth.toString();

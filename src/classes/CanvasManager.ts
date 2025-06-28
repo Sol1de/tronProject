@@ -40,9 +40,7 @@ export default class CanvasManager {
     this.renderer = new CanvasRenderer(canvas, context)
     this.statisticsManager = new StatisticsManager(this.gridManager)
     this.interactionHandler = new InteractionHandler(
-      canvas,
       this.gridManager,
-      this.pathfindingEngine,
       this.randomPathGenerator,
       this.renderer,
       this.redraw.bind(this),
@@ -212,10 +210,10 @@ export default class CanvasManager {
   }
 
   /**
-   * Dessine tous les chemins aléatoires
+   * Dessine tous les chemins aléatoires avec la couleur Tron
    */
-  public drawRandomPaths(strokeStyle: string = 'orange', lineWidth: number = 2): void {
-    this.renderer.drawRandomPaths(this.randomPaths, strokeStyle, lineWidth)
+  public drawRandomPaths(tronColor: string = '#00FFFF', lineWidth: number = 2): void {
+    this.renderer.drawRandomPaths(this.randomPaths, tronColor, lineWidth)
   }
 
   /**
@@ -559,7 +557,7 @@ export default class CanvasManager {
   public toggleGrid(): void {
     this.showGrid = !this.showGrid
     this.redraw()
-    this.drawRandomPaths()
+    this.drawRandomPaths('#00FFFF')
   }
 
   /**
