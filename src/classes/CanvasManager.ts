@@ -74,28 +74,30 @@ export default class CanvasManager {
   /**
    * Dessine la grille complète avec les points et les lignes
    */
-  public drawGrid(showGrid: boolean = true): void {
+  public drawGrid(showGrid: boolean = false): void {
     const gridPoints = this.gridManager.getGridPoints()
     const gridSizeWidth = this.gridManager.getGridSizeWidth()
     const gridSizeHeight = this.gridManager.getGridSizeHeight()
     const deadZone = this.gridManager.getDeadZone()
 
-    // Dessiner les points de grille
+    // Dessiner les points de grille seulement si showGrid est true
     this.renderer.drawGridPoints(gridPoints, showGrid)
     
-    // Dessiner les lignes de grille
-    if (deadZone) {
-      const halfWidth = deadZone.deadZoneWidth / 2
-      const halfHeight = deadZone.deadZoneHeight / 2
-      const left = deadZone.basePoint.x - halfWidth
-      const right = deadZone.basePoint.x + halfWidth
-      const top = deadZone.basePoint.y - halfHeight
-      const bottom = deadZone.basePoint.y + halfHeight
-      
-      this.renderer.drawGridLines(this.width, this.height, gridSizeWidth, gridSizeHeight, true, left, right, top, bottom)
-      this.renderer.drawDeadZoneBoundary(left, right, top, bottom, gridSizeWidth, gridSizeHeight)
-    } else {
-      this.renderer.drawGridLines(this.width, this.height, gridSizeWidth, gridSizeHeight, false)
+    // Dessiner les lignes de grille et deadzone boundary seulement si showGrid est true
+    if (showGrid) {
+      if (deadZone) {
+        const halfWidth = deadZone.deadZoneWidth / 2
+        const halfHeight = deadZone.deadZoneHeight / 2
+        const left = deadZone.basePoint.x - halfWidth
+        const right = deadZone.basePoint.x + halfWidth
+        const top = deadZone.basePoint.y - halfHeight
+        const bottom = deadZone.basePoint.y + halfHeight
+        
+        this.renderer.drawGridLines(this.width, this.height, gridSizeWidth, gridSizeHeight, true, left, right, top, bottom)
+        this.renderer.drawDeadZoneBoundary(left, right, top, bottom, gridSizeWidth, gridSizeHeight)
+      } else {
+        this.renderer.drawGridLines(this.width, this.height, gridSizeWidth, gridSizeHeight, false)
+      }
     }
   }
 
@@ -635,9 +637,9 @@ export default class CanvasManager {
     this.setRandomPaths() // Génère de nouveaux paths à chaque fois
     console.log('✅ Nouveaux chemins générés (nombre optimal)')
 
-    // 2. Effacer et redessiner la grille
-    this.redraw(true)
-    console.log('✅ Grille redessinée')
+    // 2. Effacer et redessiner sans la grille
+    this.redraw(false)
+    console.log('✅ Canvas redessiné sans grille')
 
     // 3. Exemple 1: Animation de tous les chemins simultanément
     setTimeout(() => {
@@ -654,7 +656,7 @@ export default class CanvasManager {
             // 5. Exemple 3: Affichage statique Tron après un délai
             setTimeout(() => {
               console.log('🎨 Affichage statique style Tron avec cercles')
-              this.redrawWithTron(true, 2, true)
+              this.redrawWithTron(false, 2, true)
               console.log('✅ Style Tron appliqué avec cercles de fin')
             }, 2000)
           })
@@ -689,7 +691,7 @@ export default class CanvasManager {
         
       case 'static':
         console.log('🎨 Test: Affichage statique Tron avec cercles')
-        this.redrawWithTron(true, 2, true)
+        this.redrawWithTron(false, 2, true)
         console.log('✅ Test affichage statique avec cercles terminé')
         break
 
